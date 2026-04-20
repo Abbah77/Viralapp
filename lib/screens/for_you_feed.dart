@@ -12,7 +12,10 @@ class ForYouFeed extends StatefulWidget {
   State<ForYouFeed> createState() => _ForYouFeedState();
 }
 
-class _ForYouFeedState extends State<ForYouFeed> {
+class _ForYouFeedState extends State<ForYouFeed> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final ApiService _api = ApiService();
   final PlayerCache _playerCache = PlayerCache();
   final PageController _pageController = PageController();
@@ -28,7 +31,6 @@ class _ForYouFeedState extends State<ForYouFeed> {
   void initState() {
     super.initState();
     _fetchFeed();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   Future<void> _fetchFeed() async {
@@ -46,10 +48,7 @@ class _ForYouFeedState extends State<ForYouFeed> {
         _hasMore = response.videos.isNotEmpty;
       });
       
-      // Preload thumbnails aggressively
       _prefetchThumbnails();
-      
-      // Preload next video URLs in background
       _preloadNextVideos();
       
     } catch (e) {
@@ -77,34 +76,34 @@ class _ForYouFeedState extends State<ForYouFeed> {
   void _onPageChanged(int index) {
     setState(() => _currentIndex = index);
     
-    // Fetch more when 15/20
     if (index >= _videos.length - 5 && _hasMore) {
       _fetchFeed();
     }
     
-    // Clean up players far from current
     _cleanupDistantPlayers(index);
   }
 
   void _cleanupDistantPlayers(int currentIndex) {
-    final keysToKeep = <String>{};
-    
-    // Keep players for ±2 from current
-    for (int i = currentIndex - 2; i <= currentIndex + 2; i++) {
-      if (i >= 0 && i < _videos.length) {
-        keysToKeep.add(_videos[i].id);
+    for (int i = 0; i < _videos.length; i++) {
+      if (i < currentIndex - 2 || i > currentIndex + 2) {
+        final videoId = _videos[i].id;
+        if (_playerCache.getPlayer(videoId) != null) {
+          _playerCache.disposePlayer(videoId);
+        }
       }
     }
-    
-    // Dispose others (simplified — PlayerCache handles eviction internally)
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    
     return Scaffold(
       backgroundColor: Colors.black,
       body: _videos.isEmpty && _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            )
           : PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
@@ -118,6 +117,7 @@ class _ForYouFeedState extends State<ForYouFeed> {
                 }
                 
                 return VideoCard(
+                  key: ValueKey(_videos[index].id),
                   video: _videos[index],
                   isVisible: index == _currentIndex,
                   playerCache: _playerCache,
@@ -139,7 +139,6 @@ class _ForYouFeedState extends State<ForYouFeed> {
   void dispose() {
     _playerCache.disposeAll();
     _pageController.dispose();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 }
