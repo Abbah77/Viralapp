@@ -1,4 +1,4 @@
-package com.example.viral
+package com.example.reelz
 
 import io.flutter.embedding.android.FlutterActivity
 
