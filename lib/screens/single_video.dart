@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import '../models/video.dart';
-import '../services/player_cache.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../models/video.dart' as models;
+import '../services/player_cache.dart';
 
 class SingleVideoScreen extends StatefulWidget {
-  final Video video;
+  final models.Video video;
   final PlayerCache playerCache;
 
   const SingleVideoScreen({
@@ -62,10 +62,9 @@ class _SingleVideoScreenState extends State<SingleVideoScreen> {
                 fit: BoxFit.contain,
               ),
             if (_isReady && _controller != null)
-              Video(
+              media_kit_video.Video(
                 controller: _controller!,
                 fit: BoxFit.contain,
-                controls: NoVideoControls(),
               ),
             if (_showControls)
               _buildControls(),
