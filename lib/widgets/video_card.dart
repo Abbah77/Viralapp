@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:media_kit_video/media_kit_video.dart' as mk;  // ← PREFIXED
-import '../models/video.dart' as models;
-import '../services/player_cache.dart';
-import '../screens/single_video.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:iconsax/iconsax.dart';
+import '../models/video_model.dart';
+import '../controllers/feed_controller.dart';
 
 class VideoCard extends StatefulWidget {
-  final models.Video video;
-  final bool isVisible;
-  final PlayerCache playerCache;
-  final VoidCallback onNext;
-  final VoidCallback onPrevious;
+  final VideoModel video;
+  final int index;
+  final FeedController controller;
 
   const VideoCard({
     super.key,
     required this.video,
-    required this.isVisible,
-    required this.playerCache,
-    required this.onNext,
-    required this.onPrevious,
+    required this.index,
+    required this.controller,
   });
 
   @override
@@ -26,198 +23,286 @@ class VideoCard extends StatefulWidget {
 }
 
 class _VideoCardState extends State<VideoCard> {
-  mk.VideoController? _controller;
-  bool _isVideoReady = false;
-  bool _isLiked = false;
+  VideoController? _videoController;
+  bool _showPlayIcon = false;
 
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    _setupController();
   }
 
-  Future<void> _initializePlayer() async {
-    final player = await widget.playerCache.createPlayer(widget.video);
-    if (mounted) {
-      setState(() {
-        _controller = widget.playerCache.getController(widget.video.id);
-        _isVideoReady = true;
-      });
-      if (widget.isVisible) {
-        player.play();
-      }
+  void _setupController() {
+    final player = widget.controller.getPlayer(widget.index);
+    if (player != null) {
+      _videoController = VideoController(player);
     }
   }
 
   @override
   void didUpdateWidget(VideoCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    if (widget.isVisible && !oldWidget.isVisible) {
-      _controller?.player.play();
-    } else if (!widget.isVisible && oldWidget.isVisible) {
-      _controller?.player.pause();
+    if (_videoController == null) {
+      final player = widget.controller.getPlayer(widget.index);
+      if (player != null) {
+        setState(() {
+          _videoController = VideoController(player);
+        });
+      }
     }
   }
 
-  void _openFullscreen() {
-    _controller?.player.pause();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SingleVideoScreen(
-          video: widget.video,
-          playerCache: widget.playerCache,
-        ),
-      ),
-    ).then((_) {
-      if (widget.isVisible) {
-        _controller?.player.play();
-      }
+  void _onTap() {
+    widget.controller.togglePlayPause(widget.index);
+    setState(() => _showPlayIcon = true);
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) setState(() => _showPlayIcon = false);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onDoubleTap: _openFullscreen,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: widget.video.thumbnailUrl,
-            fit: BoxFit.cover,
-            fadeInDuration: const Duration(milliseconds: 200),
-            placeholder: (_, __) => Container(color: Colors.black),
-            errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
-          ),
-          
-          if (_isVideoReady && _controller != null)
-            mk.Video(  // ← USE PREFIX
-              controller: _controller!,
-              fit: BoxFit.contain,
-            ),
-          
-          _buildOverlay(),
-        ],
-      ),
-    );
-  }
+    final size = MediaQuery.of(context).size;
 
-  Widget _buildOverlay() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '@viral_user',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+    return GestureDetector(
+      onTap: _onTap,
+      child: Container(
+        width: size.width,
+        height: size.height,
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Thumbnail background (shows while video loads)
+            CachedNetworkImage(
+              imageUrl: widget.video.thumbnailUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(color: const Color(0xFF111111)),
+              errorWidget: (context, url, error) => Container(color: const Color(0xFF111111)),
+            ),
+
+            // Video player
+            if (_videoController != null)
+              Video(
+                controller: _videoController!,
+                controls: NoVideoControls,
+                fit: BoxFit.cover,
+              ),
+
+            // Gradient overlay bottom
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: size.height * 0.55,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Color(0xEE000000),
+                      Color(0x88000000),
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // Top gradient (status bar)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 120,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x88000000), Colors.transparent],
+                  ),
+                ),
+              ),
+            ),
+
+            // Play/Pause icon overlay
+            if (_showPlayIcon)
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    widget.controller.isPlaying(widget.index)
+                        ? Iconsax.pause
+                        : Iconsax.play,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ).animate().scale(
+                  duration: 200.ms,
+                  curve: Curves.easeOut,
+                ).then().scale(
+                  begin: const Offset(1, 1),
+                  end: const Offset(0, 0),
+                  delay: 400.ms,
+                  duration: 200.ms,
+                ),
+              ),
+
+            // Bottom info
+            Positioned(
+              bottom: 90,
+              left: 16,
+              right: 80,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Caption
+                  if (widget.video.caption.isNotEmpty)
                     Text(
                       widget.video.caption,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        shadows: [
+                          Shadow(color: Colors.black54, blurRadius: 8),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    if (widget.video.hashtags.isNotEmpty)
-                      Text(
-                        widget.video.hashtags,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-                        ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ).animate().fadeIn(delay: 100.ms, duration: 400.ms)
+                      .slideY(begin: 0.3, end: 0),
+
+                  const SizedBox(height: 8),
+
+                  // Hashtags
+                  if (widget.video.hashtags.isNotEmpty)
+                    Text(
+                      widget.video.hashtags,
+                      style: const TextStyle(
+                        color: Color(0xFF25F4EE),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        shadows: [
+                          Shadow(color: Colors.black54, blurRadius: 8),
+                        ],
                       ),
-                  ],
-                ),
-              ),
-              Column(
-                children: [
-                  _buildActionButton(
-                    icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                    label: '0',
-                    onTap: () => setState(() => _isLiked = !_isLiked),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildActionButton(
-                    icon: Icons.comment,
-                    label: '0',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 20),
-                  _buildActionButton(
-                    icon: Icons.share,
-                    label: 'Share',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 20),
-                  _buildActionButton(
-                    icon: Icons.fullscreen,
-                    label: '',
-                    onTap: _openFullscreen,
-                  ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                 ],
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(30),
             ),
-            child: Icon(icon, color: Colors.white, size: 30),
-          ),
-          if (label.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-              ),
+
+            // Right side actions
+            Positioned(
+              right: 12,
+              bottom: 100,
+              child: Column(
+                children: [
+                  _ActionButton(
+                    icon: Iconsax.heart5,
+                    label: 'Like',
+                    color: const Color(0xFFFE2C55),
+                  ),
+                  const SizedBox(height: 20),
+                  _ActionButton(
+                    icon: Iconsax.message,
+                    label: 'Comment',
+                  ),
+                  const SizedBox(height: 20),
+                  _ActionButton(
+                    icon: Iconsax.send_2,
+                    label: 'Share',
+                  ),
+                  const SizedBox(height: 20),
+                  _ActionButton(
+                    icon: Iconsax.more_circle,
+                    label: 'More',
+                  ),
+                ],
+              ).animate().fadeIn(delay: 300.ms, duration: 400.ms)
+                .slideX(begin: 0.3, end: 0),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
+}
+
+class _ActionButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    this.color,
+  });
 
   @override
-  void dispose() {
-    super.dispose();
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _pressed = !_pressed);
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              widget.icon,
+              color: _pressed
+                  ? (widget.color ?? Colors.white)
+                  : Colors.white,
+              size: 22,
+            ),
+          ).animate(target: _pressed ? 1 : 0)
+            .scale(
+              begin: const Offset(1, 1),
+              end: const Offset(1.2, 1.2),
+              duration: 150.ms,
+              curve: Curves.easeOut,
+            ),
+          const SizedBox(height: 4),
+          Text(
+            widget.label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
