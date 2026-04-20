@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'screens/for_you_feed.dart';
-import 'screens/explore.dart';
+import 'screens/explore.dart';  // ← ADD THIS
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
