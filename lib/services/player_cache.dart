@@ -1,15 +1,15 @@
 import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:media_kit_video/media_kit_video.dart' as mk;
 import '../models/video.dart' as models;
 
 class PlayerCache {
   static const int maxActivePlayers = 5;
   
   final Map<String, Player> _players = {};
-  final Map<String, VideoController> _controllers = {};
+  final Map<String, mk.VideoController> _controllers = {};
 
   Player? getPlayer(String videoId) => _players[videoId];
-  VideoController? getController(String videoId) => _controllers[videoId];
+  mk.VideoController? getController(String videoId) => _controllers[videoId];
 
   Future<Player> createPlayer(models.Video video) async {
     if (_players.length >= maxActivePlayers) {
@@ -26,7 +26,7 @@ class PlayerCache {
     );
     
     _players[video.id] = player;
-    _controllers[video.id] = VideoController(player);
+    _controllers[video.id] = mk.VideoController(player);
     
     return player;
   }
