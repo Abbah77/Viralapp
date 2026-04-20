@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'screens/feed_screen.dart';
+import 'theme/tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize media_kit
+  // Initialize media_kit — must be first
   MediaKit.ensureInitialized();
 
-  // Force portrait mode
+  // Portrait only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
   ]);
 
-  // Transparent status + nav bars
+  // Transparent bars
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     systemNavigationBarColor: Colors.transparent,
@@ -34,12 +34,14 @@ class ReelzApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
+        scaffoldBackgroundColor: ReelzColors.bg,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFFE2C55),
-          secondary: Color(0xFF25F4EE),
-          surface: Color(0xFF111111),
+          primary: ReelzColors.brand,
+          secondary: ReelzColors.brand2,
+          surface: ReelzColors.bgSurface,
         ),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: ZoomPageTransitionsBuilder(),
