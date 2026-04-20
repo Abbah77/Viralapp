@@ -12,7 +12,6 @@ class PlayerCache {
   VideoController? getController(String videoId) => _controllers[videoId];
 
   Future<Player> createPlayer(Video video) async {
-    // Evict if at capacity
     if (_players.length >= maxActivePlayers) {
       _evictOldest();
     }
@@ -21,8 +20,6 @@ class PlayerCache {
       configuration: const PlayerConfiguration(
         hwdec: 'auto',
         vo: 'gpu',
-        cache: true,
-        demuxerTimeout: const Duration(seconds: 5),
       ),
     );
     
@@ -38,7 +35,6 @@ class PlayerCache {
   }
 
   Future<void> preloadVideo(String videoUrl) async {
-    // Just touch the URL to warm CDN cache
     final player = Player();
     await player.open(Media(videoUrl), play: false);
     await player.dispose();
