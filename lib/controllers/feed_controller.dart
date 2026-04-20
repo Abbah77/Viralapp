@@ -6,9 +6,8 @@ import '../services/api_service.dart';
 class FeedController extends ChangeNotifier {
   final List<VideoModel> _videos = [];
   final Map<int, Player> _players = {};
-  
+
   int _currentIndex = 0;
-  int _currentPage = 1;
   bool _isLoading = false;
   bool _isFetchingMore = false;
   String? _error;
@@ -18,31 +17,31 @@ class FeedController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Max alive players to save memory
-  static const int _maxPlayers = 5;
+  static const int _maxAlivePlayers = 5;
   static const int _preloadAhead = 2;
+  static const int _fetchMoreThreshold = 5;
 
   Future<void> init() async {
     _isLoading = true;
     notifyListeners();
-    await _fetchFeed();
+    await _fetchFeed(page: 1);
     _isLoading = false;
     notifyListeners();
 
-    // Start playing first video
     if (_videos.isNotEmpty) {
       await _initPlayer(0);
-      getPlayer(0)?.play();
+      await _initPlayer(1);
+      _players[0]?.play();
     }
   }
 
-  Future<void> _fetchFeed() async {
+  Future<void> _fetchFeed({required int page}) async {
     try {
-      final response = await ApiService.getFeed(page: _currentPage);
+      final response = await ApiService.getFeed(page: page);
       _videos.addAll(response.videos);
       _error = null;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Failed to load. Pull to refresh.';
     }
   }
 
@@ -50,26 +49,26 @@ class FeedController extends ChangeNotifier {
     final previous = _currentIndex;
     _currentIndex = index;
 
-    // Pause previous
+    // Pause previous immediately
     _players[previous]?.pause();
 
-    // Play current
+    // Init and play current
     await _initPlayer(index);
     _players[index]?.play();
 
-    // Preload next players
+    // Preload next players silently
     for (int i = 1; i <= _preloadAhead; i++) {
-      final nextIndex = index + i;
-      if (nextIndex < _videos.length) {
-        await _initPlayer(nextIndex);
+      final next = index + i;
+      if (next < _videos.length) {
+        _initPlayer(next);
       }
     }
 
-    // Dispose far players
+    // Cleanup far away players
     _disposeFarPlayers(index);
 
-    // Fetch more when near end
-    if (index >= _videos.length - 5 && !_isFetchingMore) {
+    // Fetch more near end
+    if (index >= _videos.length - _fetchMoreThreshold && !_isFetchingMore) {
       _fetchMore();
     }
 
@@ -78,9 +77,14 @@ class FeedController extends ChangeNotifier {
 
   Future<void> _initPlayer(int index) async {
     if (_players.containsKey(index)) return;
-    if (index >= _videos.length) return;
+    if (index >= _videos.length || index < 0) return;
 
-    final player = Player();
+    final player = Player(
+      configuration: const PlayerConfiguration(
+        bufferSize: 32 * 1024 * 1024, // 32MB buffer
+      ),
+    );
+
     _players[index] = player;
 
     await player.open(
@@ -88,13 +92,12 @@ class FeedController extends ChangeNotifier {
       play: false,
     );
 
-    // Loop video
     await player.setPlaylistMode(PlaylistMode.loop);
   }
 
-  void _disposeFarPlayers(int currentIndex) {
+  void _disposeFarPlayers(int current) {
     final toDispose = _players.keys
-        .where((i) => (i - currentIndex).abs() > _maxPlayers)
+        .where((i) => (i - current).abs() > _maxAlivePlayers)
         .toList();
 
     for (final i in toDispose) {
@@ -106,10 +109,21 @@ class FeedController extends ChangeNotifier {
   Future<void> _fetchMore() async {
     if (_isFetchingMore) return;
     _isFetchingMore = true;
-    _currentPage++;
-    await _fetchFeed();
+    final nextPage = (_videos.length ~/ 20) + 1;
+    await _fetchFeed(page: nextPage);
     _isFetchingMore = false;
     notifyListeners();
+  }
+
+  Future<void> refresh() async {
+    // Dispose all players
+    for (final p in _players.values) {
+      p.dispose();
+    }
+    _players.clear();
+    _videos.clear();
+    _currentIndex = 0;
+    await init();
   }
 
   Player? getPlayer(int index) => _players[index];
@@ -121,14 +135,12 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isPlaying(int index) {
-    return _players[index]?.state.playing ?? false;
-  }
+  bool isPlaying(int index) => _players[index]?.state.playing ?? false;
 
   @override
   void dispose() {
-    for (final player in _players.values) {
-      player.dispose();
+    for (final p in _players.values) {
+      p.dispose();
     }
     _players.clear();
     super.dispose();
