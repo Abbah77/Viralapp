@@ -1,6 +1,6 @@
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import '../models/video.dart';
+import '../models/video.dart' as models;
 
 class PlayerCache {
   static const int maxActivePlayers = 5;
@@ -11,16 +11,13 @@ class PlayerCache {
   Player? getPlayer(String videoId) => _players[videoId];
   VideoController? getController(String videoId) => _controllers[videoId];
 
-  Future<Player> createPlayer(Video video) async {
+  Future<Player> createPlayer(models.Video video) async {
     if (_players.length >= maxActivePlayers) {
       _evictOldest();
     }
 
     final player = Player(
-      configuration: const PlayerConfiguration(
-        hwdec: 'auto',
-        vo: 'gpu',
-      ),
+      configuration: const PlayerConfiguration(),
     );
     
     await player.open(
