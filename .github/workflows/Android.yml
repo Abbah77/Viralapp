@@ -14,7 +14,6 @@ jobs:
 
       - name: Reconstruct Android Folder
         run: |
-          # This deletes the broken manual folder and creates a perfect one
           rm -rf android
           flutter create . --platforms=android --org com.example
           
@@ -22,6 +21,6 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add android/
-          git commit -m "Repair Android folder structure"
+          git add -A
+          git commit -m "Repair Android folder structure" --allow-empty
           git push
