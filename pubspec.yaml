@@ -34,7 +34,7 @@ dependencies:
   vibration: ^1.8.4
 
   # Safe area
-  flutter_statusbarcolor_ns: ^0.3.0
+  flutter_statusbarcolor_ns: ^0.6.0
 
 dev_dependencies:
   flutter_test:
