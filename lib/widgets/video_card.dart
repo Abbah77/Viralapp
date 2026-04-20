@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import '../models/video.dart';
+import '../models/video.dart' as models;
 import '../services/player_cache.dart';
 import '../screens/single_video.dart';
 
 class VideoCard extends StatefulWidget {
-  final Video video;
+  final models.Video video;
   final bool isVisible;
   final PlayerCache playerCache;
   final VoidCallback onNext;
@@ -93,10 +93,9 @@ class _VideoCardState extends State<VideoCard> {
           ),
           
           if (_isVideoReady && _controller != null)
-            Video(
+            media_kit_video.Video(
               controller: _controller!,
               fit: BoxFit.contain,
-              controls: const NoVideoControls(),
             ),
           
           _buildOverlay(),
@@ -221,11 +220,4 @@ class _VideoCardState extends State<VideoCard> {
   void dispose() {
     super.dispose();
   }
-}
-
-class NoVideoControls extends StatelessWidget {
-  const NoVideoControls({super.key});
-
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
 }
