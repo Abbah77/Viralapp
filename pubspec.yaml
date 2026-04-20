@@ -1,5 +1,5 @@
 name: reelz
-description: High performance short video app
+description: Premium short video app
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,28 +10,31 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Video player - fastest available
+  # Video — fastest available, hardware accelerated
   media_kit: ^1.1.10
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
 
-  # HTTP client - fastest
+  # HTTP
   dio: ^5.4.0
 
   # Image caching
   cached_network_image: ^3.3.1
 
-  # State management
+  # State
   provider: ^6.1.1
 
-  # Smooth animations
+  # Premium animations
   flutter_animate: ^4.5.0
 
-  # Icons
-  iconsax: ^0.0.8
+  # Fonts
+  google_fonts: ^6.2.1
 
-  # Safe area + status bar
-  flutter_statusbarcolor_ns: ^0.6.0
+  # Haptics
+  vibration: ^1.8.4
+
+  # Safe area
+  flutter_statusbarcolor_ns: ^0.3.0
 
 dev_dependencies:
   flutter_test:
@@ -40,5 +43,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
