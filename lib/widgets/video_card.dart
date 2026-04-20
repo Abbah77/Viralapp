@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:media_kit_video/media_kit_video.dart' as mk;  // ← PREFIXED
 import '../models/video.dart' as models;
 import '../services/player_cache.dart';
 import '../screens/single_video.dart';
@@ -26,7 +26,7 @@ class VideoCard extends StatefulWidget {
 }
 
 class _VideoCardState extends State<VideoCard> {
-  VideoController? _controller;
+  mk.VideoController? _controller;
   bool _isVideoReady = false;
   bool _isLiked = false;
 
@@ -93,7 +93,7 @@ class _VideoCardState extends State<VideoCard> {
           ),
           
           if (_isVideoReady && _controller != null)
-            media_kit_video.Video(
+            mk.Video(  // ← USE PREFIX
               controller: _controller!,
               fit: BoxFit.contain,
             ),
