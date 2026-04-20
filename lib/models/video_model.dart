@@ -15,11 +15,11 @@ class VideoModel {
 
   factory VideoModel.fromJson(Map<String, dynamic> json) {
     return VideoModel(
-      id: json['id'] ?? '',
-      videoUrl: json['video_url'] ?? '',
-      thumbnailUrl: json['thumbnail_url'] ?? '',
-      caption: json['caption'] ?? '',
-      hashtags: json['hashtags'] ?? '',
+      id: json['id']?.toString() ?? '',
+      videoUrl: json['video_url']?.toString() ?? '',
+      thumbnailUrl: json['thumbnail_url']?.toString() ?? '',
+      caption: json['caption']?.toString() ?? '',
+      hashtags: json['hashtags']?.toString() ?? '',
     );
   }
 }
@@ -42,10 +42,10 @@ class FeedResponse {
       page: json['page'] ?? 1,
       nextPage: json['next_page'] ?? 2,
       videos: (json['videos'] as List<dynamic>? ?? [])
-          .map((v) => VideoModel.fromJson(v))
+          .map((v) => VideoModel.fromJson(v as Map<String, dynamic>))
           .toList(),
       preloadUrls: (json['preload_urls'] as List<dynamic>? ?? [])
-          .map((v) => VideoModel.fromJson(v))
+          .map((v) => VideoModel.fromJson(v as Map<String, dynamic>))
           .toList(),
     );
   }
