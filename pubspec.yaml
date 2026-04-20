@@ -31,7 +31,7 @@ dependencies:
   iconsax: ^0.0.8
 
   # Safe area + status bar
-  flutter_statusbarcolor_ns: ^0.3.0
+  flutter_statusbarcolor_ns: ^0.6.0
 
 dev_dependencies:
   flutter_test:
