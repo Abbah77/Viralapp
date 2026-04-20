@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../models/video.dart';
 import '../services/player_cache.dart';
+import '../screens/single_video.dart';
 
 class VideoCard extends StatefulWidget {
   final Video video;
@@ -27,6 +28,7 @@ class VideoCard extends StatefulWidget {
 class _VideoCardState extends State<VideoCard> {
   VideoController? _controller;
   bool _isVideoReady = false;
+  bool _isLiked = false;
 
   @override
   void initState() {
@@ -41,6 +43,9 @@ class _VideoCardState extends State<VideoCard> {
         _controller = widget.playerCache.getController(widget.video.id);
         _isVideoReady = true;
       });
+      if (widget.isVisible) {
+        player.play();
+      }
     }
   }
 
@@ -55,31 +60,48 @@ class _VideoCardState extends State<VideoCard> {
     }
   }
 
+  void _openFullscreen() {
+    _controller?.player.pause();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SingleVideoScreen(
+          video: widget.video,
+          playerCache: widget.playerCache,
+        ),
+      ),
+    ).then((_) {
+      if (widget.isVisible) {
+        _controller?.player.play();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Thumbnail ALWAYS visible first — this is the key to perceived speed
-        CachedNetworkImage(
-          imageUrl: widget.video.thumbnailUrl,
-          fit: BoxFit.cover,
-          fadeInDuration: const Duration(milliseconds: 200),
-          placeholder: (_, __) => Container(color: Colors.black),
-          errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
-        ),
-        
-        // Video layer on top once ready
-        if (_isVideoReady && _controller != null)
-          Video(
-            controller: _controller!,
-            fit: BoxFit.contain,
-            controls: NoVideoControls(),
+    return GestureDetector(
+      onDoubleTap: _openFullscreen,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: widget.video.thumbnailUrl,
+            fit: BoxFit.cover,
+            fadeInDuration: const Duration(milliseconds: 200),
+            placeholder: (_, __) => Container(color: Colors.black),
+            errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
           ),
-        
-        // UI Overlay
-        _buildOverlay(),
-      ],
+          
+          if (_isVideoReady && _controller != null)
+            Video(
+              controller: _controller!,
+              fit: BoxFit.contain,
+              controls: const NoVideoControls(),
+            ),
+          
+          _buildOverlay(),
+        ],
+      ),
     );
   }
 
@@ -88,7 +110,7 @@ class _VideoCardState extends State<VideoCard> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -96,9 +118,9 @@ class _VideoCardState extends State<VideoCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '@user',
-                      style: const TextStyle(
+                    const Text(
+                      '@viral_user',
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -115,24 +137,43 @@ class _VideoCardState extends State<VideoCard> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      widget.video.hashtags,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
+                    if (widget.video.hashtags.isNotEmpty)
+                      Text(
+                        widget.video.hashtags,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
               Column(
                 children: [
-                  _buildActionButton(Icons.favorite_border, '0'),
-                  const SizedBox(height: 16),
-                  _buildActionButton(Icons.comment, '0'),
-                  const SizedBox(height: 16),
-                  _buildActionButton(Icons.share, 'Share'),
+                  _buildActionButton(
+                    icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                    label: '0',
+                    onTap: () => setState(() => _isLiked = !_isLiked),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildActionButton(
+                    icon: Icons.comment,
+                    label: '0',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 20),
+                  _buildActionButton(
+                    icon: Icons.share,
+                    label: 'Share',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 20),
+                  _buildActionButton(
+                    icon: Icons.fullscreen,
+                    label: '',
+                    onTap: _openFullscreen,
+                  ),
                 ],
               ),
             ],
@@ -142,34 +183,42 @@ class _VideoCardState extends State<VideoCard> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.black26,
-            borderRadius: BorderRadius.circular(30),
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Icon(icon, color: Colors.white, size: 30),
           ),
-          child: Icon(icon, color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-          ),
-        ),
-      ],
+          if (label.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
   @override
   void dispose() {
-    // DO NOT dispose player here — PlayerCache manages lifecycle
     super.dispose();
   }
 }
