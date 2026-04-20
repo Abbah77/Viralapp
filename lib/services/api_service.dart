@@ -29,8 +29,27 @@ class ApiService {
         videos: videos,
         preloadUrls: preloadUrls,
       );
-    } catch (e) {
-      throw Exception('Failed to fetch feed: $e');
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch feed: ${e.message}');
+    }
+  }
+
+  Future<Video> fetchSingleVideo(String videoId) async {
+    try {
+      final response = await _dio.get('/video/$videoId');
+      return Video.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch video: ${e.message}');
+    }
+  }
+
+  Future<List<Video>> searchVideos({int page = 1}) async {
+    try {
+      final response = await _dio.get('/feed', queryParameters: {'page': page});
+      final data = response.data;
+      return (data['videos'] as List).map((v) => Video.fromJson(v)).toList();
+    } on DioException catch (e) {
+      throw Exception('Failed to search: ${e.message}');
     }
   }
 }
