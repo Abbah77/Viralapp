@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:media_kit_video/media_kit_video.dart' as mk;  // ← PREFIXED
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/video.dart' as models;
 import '../services/player_cache.dart';
@@ -20,7 +20,7 @@ class SingleVideoScreen extends StatefulWidget {
 }
 
 class _SingleVideoScreenState extends State<SingleVideoScreen> {
-  VideoController? _controller;
+  mk.VideoController? _controller;
   bool _isReady = false;
   bool _showControls = true;
 
@@ -62,7 +62,7 @@ class _SingleVideoScreenState extends State<SingleVideoScreen> {
                 fit: BoxFit.contain,
               ),
             if (_isReady && _controller != null)
-              media_kit_video.Video(
+              mk.Video(  // ← USE PREFIX
                 controller: _controller!,
                 fit: BoxFit.contain,
               ),
