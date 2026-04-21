@@ -80,7 +80,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       scrollDirection: Axis.vertical,
                       itemCount: controller.videos.length,
                       onPageChanged: controller.onPageChanged,
-                      physics: const _ReelzScrollPhysics(),
+                      physics: const PageScrollPhysics(),
                       itemBuilder: (context, index) {
                         return VideoCard(
                           key: ValueKey(controller.videos[index].id),
@@ -467,20 +467,4 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-// ── Custom scroll physics — no bounce, pure snap ─────────────────────────────
 
-class _ReelzScrollPhysics extends ScrollPhysics {
-  const _ReelzScrollPhysics({super.parent});
-
-  @override
-  _ReelzScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return _ReelzScrollPhysics(parent: buildParent(ancestor));
-  }
-
-  @override
-  SpringDescription get spring => const SpringDescription(
-        mass: 50,
-        stiffness: 200,
-        damping: 1.1,
-      );
-}
