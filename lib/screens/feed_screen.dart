@@ -5,10 +5,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../controllers/feed_controller.dart';
 import '../theme/tokens.dart';
-import '../widgets/ambient_background.dart';
-import '../widgets/skeleton_loader.dart';
-import '../widgets/video_card.dart';
-import '../widgets/action_button.dart';
+import '../widgets/ambient_bg.dart';
+import '../widgets/feed_card.dart';
+import 'explore_screen.dart';
+import 'profile_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -18,17 +18,19 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  late final PageController _pageController;
-  late final FeedController _feedController;
   int _navIndex = 0;
+  late final FeedController _fc;
+
+  final _screens = const [
+    _FeedView(),
+    ExploreScreen(),
+    ProfileScreen(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _feedController = FeedController();
-    _feedController.init();
-
+    _fc = FeedController()..init();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -40,146 +42,155 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   void dispose() {
-    _pageController.dispose();
-    _feedController.dispose();
+    _fc.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
-      value: _feedController,
+      value: _fc,
       child: Scaffold(
-        backgroundColor: ReelzColors.bg,
+        backgroundColor: RColors.bg,
         extendBody: true,
         extendBodyBehindAppBar: true,
-        body: Consumer<FeedController>(
-          builder: (context, controller, _) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // ── Ambient background ──────────────────────────
-                const AmbientBackground(),
-
-                // ── Feed or skeleton ────────────────────────────
-                if (controller.isLoading)
-                  const SkeletonLoader()
-                else if (controller.error != null && controller.videos.isEmpty)
-                  _ErrorView(
-                    error: controller.error!,
-                    onRetry: controller.refresh,
-                  )
-                else
-                  RefreshIndicator(
-                    onRefresh: controller.refresh,
-                    color: ReelzColors.brand,
-                    backgroundColor: ReelzColors.bgRaised,
-                    strokeWidth: 2,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      scrollDirection: Axis.vertical,
-                      itemCount: controller.videos.length,
-                      onPageChanged: controller.onPageChanged,
-                      physics: const PageScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        return VideoCard(
-                          key: ValueKey(controller.videos[index].id),
-                          video: controller.videos[index],
-                          index: index,
-                          controller: controller,
-                        );
-                      },
-                    ),
-                  ),
-
-                // ── Top header ──────────────────────────────────
-                if (!controller.isLoading)
-                  const Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: _TopHeader(),
-                  ),
-              ],
-            );
-          },
+        body: IndexedStack(
+          index: _navIndex,
+          children: _screens,
         ),
-        bottomNavigationBar: _BottomNav(
-          selectedIndex: _navIndex,
-          onTap: (i) => setState(() => _navIndex = i),
-        ),
+        bottomNavigationBar: _navIndex == 0
+            ? _BottomNav(
+                index: _navIndex,
+                onTap: (i) => setState(() => _navIndex = i),
+              )
+            : null,
       ),
     );
   }
 }
 
-// ── Top Header ──────────────────────────────────────────────────────────────
+class _FeedView extends StatefulWidget {
+  const _FeedView();
 
-class _TopHeader extends StatelessWidget {
-  const _TopHeader();
+  @override
+  State<_FeedView> createState() => _FeedViewState();
+}
+
+class _FeedViewState extends State<_FeedView> {
+  final _pageCtrl = PageController();
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: 52,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // Logo wordmark
-                  Text(
-                    'Reelz',
-                    style: ReelzTextStyles.wordmark(size: 22),
-                  )
-                      .animate()
-                      .fadeIn(duration: ReelzDurations.lg)
-                      .slideX(begin: -0.2, end: 0, curve: ReelzCurves.spring),
+    return Consumer<FeedController>(
+      builder: (_, ctrl, __) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Ambient
+            const AmbientBg(),
 
-                  // Tabs center
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _HeaderTab(label: 'Following', active: false),
-                        const SizedBox(width: 20),
-                        _HeaderTab(label: 'For You', active: true),
-                      ],
+            if (ctrl.isLoading)
+              const _Skeleton()
+            else if (ctrl.error != null && ctrl.videos.isEmpty)
+              _ErrorView(onRetry: ctrl.refresh)
+            else
+              RefreshIndicator(
+                onRefresh: ctrl.refresh,
+                color: RColors.brand,
+                backgroundColor: RColors.bgRaised,
+                child: PageView.builder(
+                  controller: _pageCtrl,
+                  scrollDirection: Axis.vertical,
+                  itemCount: ctrl.videos.length,
+                  onPageChanged: ctrl.onPageChanged,
+                  physics: const PageScrollPhysics(),
+                  itemBuilder: (_, i) => ChangeNotifierProvider.value(
+                    value: ctrl,
+                    child: FeedCard(
+                      key: ValueKey(ctrl.videos[i].id),
+                      video: ctrl.videos[i],
+                      index: i,
                     ),
                   ),
+                ),
+              ),
 
-                  // Search icon
-                  GestureDetector(
-                    onTap: () => HapticFeedback.lightImpact(),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: ReelzColors.glass,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: ReelzColors.glassBorder,
-                              width: 1,
-                            ),
-                          ),
-                          child: ReelzIcons.search(color: ReelzColors.text),
+            // Top bar
+            if (!ctrl.isLoading) const _TopBar(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 52,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text('Reelz', style: RText.wordmark())
+                    .animate()
+                    .fadeIn(duration: RDur.lg)
+                    .slideX(begin: -0.2, end: 0, curve: RCurve.spring),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _Tab(label: 'Following', active: false),
+                      const SizedBox(width: 20),
+                      _Tab(label: 'For You', active: true),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const ExploreScreen()),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: RColors.glass,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: RColors.glassBorder),
                         ),
+                        child: const Icon(Icons.search_rounded,
+                            color: RColors.text, size: 20),
                       ),
                     ),
-                  )
-                      .animate()
-                      .fadeIn(duration: ReelzDurations.lg)
-                      .slideX(begin: 0.2, end: 0, curve: ReelzCurves.spring),
-                ],
-              ),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: RDur.lg)
+                    .slideX(begin: 0.2, end: 0, curve: RCurve.spring),
+              ],
             ),
           ),
         ),
@@ -188,11 +199,10 @@ class _TopHeader extends StatelessWidget {
   }
 }
 
-class _HeaderTab extends StatelessWidget {
+class _Tab extends StatelessWidget {
   final String label;
   final bool active;
-
-  const _HeaderTab({required this.label, required this.active});
+  const _Tab({required this.label, required this.active});
 
   @override
   Widget build(BuildContext context) {
@@ -202,27 +212,26 @@ class _HeaderTab extends StatelessWidget {
       children: [
         Text(
           label,
-          style: ReelzTextStyles.body(
+          style: RText.body(
             size: active ? 15 : 14,
             weight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? ReelzColors.text : ReelzColors.text3,
+            color: active ? RColors.text : RColors.text3,
           ),
         ),
         const SizedBox(height: 3),
         AnimatedContainer(
-          duration: ReelzDurations.md,
-          curve: ReelzCurves.spring,
-          width: active ? 20 : 0,
+          duration: RDur.md,
+          curve: RCurve.spring,
+          width: active ? 18 : 0,
           height: 2.5,
           decoration: BoxDecoration(
-            color: active ? ReelzColors.brand : Colors.transparent,
+            color: active ? RColors.brand : Colors.transparent,
             borderRadius: BorderRadius.circular(2),
             boxShadow: active
                 ? [
                     BoxShadow(
-                      color: ReelzColors.brand.withOpacity(0.6),
+                      color: RColors.brand.withOpacity(0.6),
                       blurRadius: 6,
-                      spreadRadius: 1,
                     )
                   ]
                 : null,
@@ -233,16 +242,10 @@ class _HeaderTab extends StatelessWidget {
   }
 }
 
-// ── Bottom Nav ───────────────────────────────────────────────────────────────
-
 class _BottomNav extends StatelessWidget {
-  final int selectedIndex;
+  final int index;
   final Function(int) onTap;
-
-  const _BottomNav({
-    required this.selectedIndex,
-    required this.onTap,
-  });
+  const _BottomNav({required this.index, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -251,13 +254,9 @@ class _BottomNav extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: ReelzColors.bg.withOpacity(0.82),
+            color: RColors.bg.withOpacity(0.82),
             border: Border(
-              top: BorderSide(
-                color: ReelzColors.glassBorder,
-                width: 0.5,
-              ),
-            ),
+                top: BorderSide(color: RColors.glassBorder, width: 0.5)),
           ),
           child: SafeArea(
             top: false,
@@ -266,59 +265,51 @@ class _BottomNav extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _NavItem(
-                    icon: ReelzIcons.home(filled: selectedIndex == 0),
+                  _NavBtn(
+                    icon: index == 0
+                        ? Icons.home_rounded
+                        : Icons.home_outlined,
                     label: 'Home',
-                    active: selectedIndex == 0,
+                    active: index == 0,
                     onTap: () => onTap(0),
                   ),
-                  _NavItem(
-                    icon: ReelzIcons.search(filled: selectedIndex == 1),
+                  _NavBtn(
+                    icon: index == 1
+                        ? Icons.explore_rounded
+                        : Icons.explore_outlined,
                     label: 'Explore',
-                    active: selectedIndex == 1,
+                    active: index == 1,
                     onTap: () => onTap(1),
                   ),
-
-                  // Create button
+                  // Post button
                   GestureDetector(
                     onTap: () => HapticFeedback.heavyImpact(),
                     child: Container(
                       width: 46,
-                      height: 32,
+                      height: 30,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [ReelzColors.brand, ReelzColors.brand2],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                          colors: [RColors.brand, RColors.brand2],
                         ),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: ReelzColors.brand.withOpacity(0.4),
+                            color: RColors.brand.withOpacity(0.4),
                             blurRadius: 12,
-                            spreadRadius: 1,
-                          ),
+                          )
                         ],
                       ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                      child: const Icon(Icons.add_rounded,
+                          color: Colors.white, size: 22),
                     ),
                   ),
-
-                  _NavItem(
-                    icon: ReelzIcons.inbox(filled: selectedIndex == 3),
-                    label: 'Inbox',
-                    active: selectedIndex == 3,
-                    onTap: () => onTap(3),
-                  ),
-                  _NavItem(
-                    icon: ReelzIcons.profile(filled: selectedIndex == 4),
+                  _NavBtn(
+                    icon: index == 2
+                        ? Icons.person_rounded
+                        : Icons.person_outline_rounded,
                     label: 'Profile',
-                    active: selectedIndex == 4,
-                    onTap: () => onTap(4),
+                    active: index == 2,
+                    onTap: () => onTap(2),
                   ),
                 ],
               ),
@@ -330,13 +321,13 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  final Widget icon;
+class _NavBtn extends StatelessWidget {
+  final IconData icon;
   final String label;
   final bool active;
   final VoidCallback onTap;
 
-  const _NavItem({
+  const _NavBtn({
     required this.icon,
     required this.label,
     required this.active,
@@ -351,26 +342,18 @@ class _NavItem extends StatelessWidget {
         onTap();
       },
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: ReelzDurations.md,
-        curve: ReelzCurves.spring,
+      child: SizedBox(
         width: 60,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedDefaultTextStyle(
-              duration: ReelzDurations.md,
-              style: TextStyle(
-                color: active ? ReelzColors.brand : ReelzColors.text3,
-              ),
-              child: icon,
-            ),
+            Icon(icon,
+                color: active ? RColors.brand : RColors.text3, size: 26),
             const SizedBox(height: 3),
             Text(
               label,
-              style: ReelzTextStyles.navLabel.copyWith(
-                color: active ? ReelzColors.brand : ReelzColors.text3,
-              ),
+              style: RText.label(
+                  color: active ? RColors.brand : RColors.text3),
             ),
           ],
         ),
@@ -379,92 +362,52 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ── Error view ───────────────────────────────────────────────────────────────
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(color: RColors.bgCard)
+        .animate(onPlay: (c) => c.repeat())
+        .shimmer(duration: 1200.ms, color: RColors.glassMd);
+  }
+}
 
 class _ErrorView extends StatelessWidget {
-  final String error;
   final VoidCallback onRetry;
-
-  const _ErrorView({required this.error, required this.onRetry});
+  const _ErrorView({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: RColors.text3, size: 48),
+          const SizedBox(height: 16),
+          Text('Could not load',
+              style: RText.body(size: 16, weight: FontWeight.w700)),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ReelzColors.bgRaised,
-                border: Border.all(color: ReelzColors.glassBorder),
+                gradient: const LinearGradient(
+                    colors: [RColors.brand, RColors.brand2]),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                      color: RColors.brand.withOpacity(0.4), blurRadius: 16)
+                ],
               ),
-              child: const Icon(
-                Icons.wifi_off_rounded,
-                color: ReelzColors.text3,
-                size: 32,
-              ),
+              child: Text('Retry',
+                  style: RText.body(size: 14, weight: FontWeight.w700)),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Could not load feed',
-              style: ReelzTextStyles.body(
-                size: 16,
-                weight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: ReelzTextStyles.body(
-                size: 13,
-                color: ReelzColors.text3,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 28),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [ReelzColors.brand, ReelzColors.brand2],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ReelzColors.brand.withOpacity(0.4),
-                      blurRadius: 16,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'Try again',
-                  style: ReelzTextStyles.body(
-                    size: 14,
-                    weight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        )
-            .animate()
-            .fadeIn(duration: ReelzDurations.lg)
-            .scale(
-              begin: const Offset(0.9, 0.9),
-              curve: ReelzCurves.spring,
-            ),
+          ),
+        ],
       ),
     );
   }
 }
-
-
