@@ -1,5 +1,5 @@
 name: reelz
-description: Premium short video app
+description: Premium Cinema Streaming App
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Video — fastest available, hardware accelerated
+  # Video player - fastest
   media_kit: ^1.1.10
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
@@ -24,13 +24,17 @@ dependencies:
   # State
   provider: ^6.1.1
 
-  # Premium animations
+  # Animations
   flutter_animate: ^4.5.0
 
   # Fonts
   google_fonts: ^6.2.1
 
-  # Haptics — using Flutter built-in HapticFeedback (no package needed)
+  # Brightness control
+  screen_brightness: ^0.2.2+1
+
+  # Keep screen on during playback
+  wakelock_plus: ^1.2.5
 
 dev_dependencies:
   flutter_test:
