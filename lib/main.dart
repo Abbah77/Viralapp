@@ -6,16 +6,12 @@ import 'theme/tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize media_kit — must be first
   MediaKit.ensureInitialized();
 
-  // Portrait only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
 
-  // Transparent bars
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     systemNavigationBarColor: Colors.transparent,
@@ -34,19 +30,14 @@ class ReelzApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: ReelzColors.bg,
+        scaffoldBackgroundColor: RColors.bg,
         colorScheme: const ColorScheme.dark(
-          primary: ReelzColors.brand,
-          secondary: ReelzColors.brand2,
-          surface: ReelzColors.bgSurface,
+          primary: RColors.brand,
+          secondary: RColors.brand2,
+          surface: RColors.bgSurface,
         ),
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: ZoomPageTransitionsBuilder(),
-          },
-        ),
       ),
       home: const FeedScreen(),
     );
