@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:provider/provider.dart';
+import 'controllers/settings_controller.dart';
 import 'screens/feed_screen.dart';
+import 'screens/profile_screen.dart';
 import 'theme/tokens.dart';
 
 void main() async {
@@ -17,7 +20,15 @@ void main() async {
     systemNavigationBarColor: Colors.transparent,
   ));
 
-  runApp(const ReelzApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SettingsController()),
+        ChangeNotifierProvider(create: (_) => SavedVideos()),
+      ],
+      child: const ReelzApp(),
+    ),
+  );
 }
 
 class ReelzApp extends StatelessWidget {
