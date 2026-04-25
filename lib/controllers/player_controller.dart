@@ -22,7 +22,9 @@ class PlayerController extends ChangeNotifier {
   PlayerController({required this.movie, int startEpisode = 0}) {
     _currentEp = startEpisode;
     _player = Player(
-      configuration: const PlayerConfiguration(bufferSize: 64 * 1024 * 1024),
+      configuration: const PlayerConfiguration(
+        bufferSize: 64 * 1024 * 1024, // 64MB buffer
+      ),
     );
     _init();
   }
@@ -46,20 +48,13 @@ class PlayerController extends ChangeNotifier {
     WakelockPlus.enable();
     await _player.open(Media(movie.videoUrl), play: false);
 
-    // Seek to episode start
     final ep = movie.episodes[_currentEp];
     await _player.seek(Duration(seconds: ep.startSec));
     await _player.play();
+    await _player.setPlaylistMode(PlaylistMode.single);
 
     _player.stream.position.listen((pos) {
       _position = pos;
-      final ep = movie.episodes[_currentEp];
-
-      // Auto next episode
-      if (pos.inSeconds >= ep.endSec - 1 &&
-          _currentEp < movie.episodes.length - 1) {
-        playEpisode(_currentEp + 1);
-      }
       notifyListeners();
     });
 
@@ -88,16 +83,12 @@ class PlayerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void seekTo(Duration pos) {
-    _player.seek(pos);
-  }
+  void seekTo(Duration pos) => _player.seek(pos);
 
   void seekRelative(int secs) {
-    final newPos = _position + Duration(seconds: secs);
-    _player.seek(newPos);
+    _player.seek(_position + Duration(seconds: secs));
   }
 
-  // Episode progress within current episode only
   double get episodeProgress {
     final ep = movie.episodes[_currentEp];
     final epDur = ep.endSec - ep.startSec;
@@ -116,16 +107,15 @@ class PlayerController extends ChangeNotifier {
   String get positionLabel {
     final ep = movie.episodes[_currentEp];
     final epPos = (_position.inSeconds - ep.startSec).clamp(0, ep.endSec);
-    return _formatDur(Duration(seconds: epPos));
+    return _fmt(Duration(seconds: epPos));
   }
 
   String get durationLabel {
     final ep = movie.episodes[_currentEp];
-    final epDur = ep.endSec - ep.startSec;
-    return _formatDur(Duration(seconds: epDur));
+    return _fmt(Duration(seconds: ep.endSec - ep.startSec));
   }
 
-  String _formatDur(Duration d) {
+  String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$m:$s';
@@ -135,10 +125,10 @@ class PlayerController extends ChangeNotifier {
     if (_isLocked) return;
     _showControls = !_showControls;
     notifyListeners();
-    if (_showControls) _autoHideControls();
+    if (_showControls) _autoHide();
   }
 
-  void _autoHideControls() {
+  void _autoHide() {
     Future.delayed(const Duration(seconds: 3), () {
       if (_showControls && !_showDrawer && !_showToolsDrawer) {
         _showControls = false;
@@ -150,7 +140,7 @@ class PlayerController extends ChangeNotifier {
   void showControlsTemporary() {
     _showControls = true;
     notifyListeners();
-    _autoHideControls();
+    _autoHide();
   }
 
   void toggleDrawer() {
@@ -188,7 +178,8 @@ class PlayerController extends ChangeNotifier {
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      await SystemChrome.setEnabledSystemUIMode(
+          SystemUiMode.immersiveSticky);
     } else {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
