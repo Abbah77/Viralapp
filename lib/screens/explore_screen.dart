@@ -6,9 +6,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../controllers/feed_controller.dart';
 import '../controllers/player_controller.dart';
+import '../controllers/settings_controller.dart';
 import '../models/models.dart';
 import '../theme/tokens.dart';
-import '../screens/player_screen.dart';
+import 'player_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -18,226 +19,57 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  final _searchCtrl = TextEditingController();
+  final _ctrl = TextEditingController();
   List<VideoModel> _results = [];
   bool _searching = false;
   bool _hasSearched = false;
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  Future<void> _search(String query) async {
+  void _search(String query) {
     if (query.trim().isEmpty) {
       setState(() {
         _results = [];
         _hasSearched = false;
+        _searching = false;
       });
       return;
     }
 
     setState(() => _searching = true);
 
-    // Search from feed videos locally
-    try {
-      final fc = context.read<FeedController>();
-      final q = query.toLowerCase();
-      final filtered = fc.videos
-          .where((v) =>
-              v.caption.toLowerCase().contains(q) ||
-              v.hashtags.toLowerCase().contains(q))
-          .toList();
-      setState(() {
-        _results = filtered;
-        _hasSearched = true;
-      });
-    } catch (_) {
-      setState(() => _results = []);
-    }
+    final fc = context.read<FeedController>();
+    final q = query.toLowerCase();
+    final filtered = fc.videos
+        .where((v) =>
+            v.caption.toLowerCase().contains(q) ||
+            v.hashtags.toLowerCase().contains(q))
+        .toList();
 
-    setState(() => _searching = false);
+    setState(() {
+      _results = filtered;
+      _hasSearched = true;
+      _searching = false;
+    });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: RColors.bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  if (Navigator.of(context).canPop())
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        margin: const EdgeInsets.only(right: 10),
-                        decoration: BoxDecoration(
-                          color: RColors.glass,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: RColors.glassBorder),
-                        ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: RColors.text, size: 18),
-                      ),
-                    ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: RColors.glassMd,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: RColors.glassBorder),
-                          ),
-                          child: TextField(
-                            controller: _searchCtrl,
-                            autofocus: true,
-                            style: RText.body(size: 14),
-                            textInputAction: TextInputAction.search,
-                            onChanged: _search,
-                            onSubmitted: _search,
-                            decoration: InputDecoration(
-                              hintText: 'Search movies...',
-                              hintStyle:
-                                  RText.body(size: 14, color: RColors.text3),
-                              prefixIcon: const Icon(Icons.search_rounded,
-                                  color: RColors.text3, size: 20),
-                              suffixIcon: _searchCtrl.text.isNotEmpty
-                                  ? GestureDetector(
-                                      onTap: () {
-                                        _searchCtrl.clear();
-                                        _search('');
-                                      },
-                                      child: const Icon(Icons.close_rounded,
-                                          color: RColors.text3, size: 18),
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Results
-            Expanded(
-              child: _searching
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: RColors.brand, strokeWidth: 2),
-                    )
-                  : _hasSearched && _results.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.search_off_rounded,
-                                  color: RColors.text3, size: 48),
-                              const SizedBox(height: 12),
-                              Text('No results found',
-                                  style: RText.body(
-                                      size: 15,
-                                      weight: FontWeight.w600,
-                                      color: RColors.text2)),
-                            ],
-                          ),
-                        )
-                      : _hasSearched
-                          ? _ResultsGrid(videos: _results)
-                          : _TrendingGrid(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TrendingGrid extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final fc = context.watch<FeedController>();
-    final videos = fc.videos.take(20).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Trending Now',
-            style: RText.body(size: 16, weight: FontWeight.w700),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Expanded(child: _ResultsGrid(videos: videos)),
-      ],
-    );
-  }
-}
-
-class _ResultsGrid extends StatelessWidget {
-  final List<VideoModel> videos;
-  const _ResultsGrid({required this.videos});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.65,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-      ),
-      itemCount: videos.length,
-      itemBuilder: (_, i) => _MoviePoster(
-        video: videos[i],
-        index: i,
-      ),
-    );
-  }
-}
-
-class _MoviePoster extends StatefulWidget {
-  final VideoModel video;
-  final int index;
-  const _MoviePoster({required this.video, required this.index});
-
-  @override
-  State<_MoviePoster> createState() => _MoviePosterState();
-}
-
-class _MoviePosterState extends State<_MoviePoster> {
-  bool _longPressed = false;
-
-  void _onTap() {
+  void _openPlayer(VideoModel video) {
     HapticFeedback.lightImpact();
-    final movie = MovieModel.fromVideo(widget.video);
+    final movie = MovieModel.fromVideo(video);
+    final settings = context.read<SettingsController>();
     Navigator.of(context).push(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 450),
-        pageBuilder: (_, __, ___) => ChangeNotifierProvider(
-          create: (_) => PlayerController(movie: movie),
+        transitionDuration: const Duration(milliseconds: 420),
+        pageBuilder: (_, __, ___) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+                create: (_) => PlayerController(movie: movie)),
+            ChangeNotifierProvider.value(value: settings),
+          ],
           child: const PlayerScreen(),
         ),
         transitionsBuilder: (_, anim, __, child) => FadeTransition(
@@ -255,8 +87,150 @@ class _MoviePosterState extends State<_MoviePoster> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: RColors.bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: RColors.glassMd,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: RColors.glassBorder),
+                    ),
+                    child: TextField(
+                      controller: _ctrl,
+                      style: RText.body(size: 14),
+                      textInputAction: TextInputAction.search,
+                      onChanged: _search,
+                      onSubmitted: _search,
+                      decoration: InputDecoration(
+                        hintText: 'Search movies...',
+                        hintStyle:
+                            RText.body(size: 14, color: RColors.text3),
+                        prefixIcon: const Icon(Icons.search_rounded,
+                            color: RColors.text3, size: 20),
+                        suffixIcon: _ctrl.text.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  _ctrl.clear();
+                                  _search('');
+                                },
+                                child: const Icon(Icons.close_rounded,
+                                    color: RColors.text3, size: 18),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: _searching
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: RColors.brand, strokeWidth: 2.5),
+                    )
+                  : _hasSearched && _results.isEmpty
+                      ? _EmptySearch()
+                      : _hasSearched
+                          ? _Grid(
+                              videos: _results,
+                              onTap: _openPlayer,
+                            )
+                          : _Trending(onTap: _openPlayer),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Trending extends StatelessWidget {
+  final Function(VideoModel) onTap;
+  const _Trending({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final videos = context.watch<FeedController>().videos.take(30).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Text('Trending',
+              style: RText.body(size: 16, weight: FontWeight.w700)),
+        ),
+        Expanded(
+          child: _Grid(videos: videos, onTap: onTap),
+        ),
+      ],
+    );
+  }
+}
+
+class _Grid extends StatelessWidget {
+  final List<VideoModel> videos;
+  final Function(VideoModel) onTap;
+  const _Grid({required this.videos, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.65,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
+      itemCount: videos.length,
+      itemBuilder: (_, i) => _Poster(
+        video: videos[i],
+        index: i,
+        onTap: () => onTap(videos[i]),
+      ),
+    );
+  }
+}
+
+class _Poster extends StatefulWidget {
+  final VideoModel video;
+  final int index;
+  final VoidCallback onTap;
+  const _Poster({
+    required this.video,
+    required this.index,
+    required this.onTap,
+  });
+
+  @override
+  State<_Poster> createState() => _PosterState();
+}
+
+class _PosterState extends State<_Poster> {
+  bool _longPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: _onTap,
+      onTap: widget.onTap,
       onLongPressStart: (_) {
         HapticFeedback.mediumImpact();
         setState(() => _longPressed = true);
@@ -271,6 +245,7 @@ class _MoviePosterState extends State<_MoviePoster> {
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // Thumbnail
               CachedNetworkImage(
                 imageUrl: widget.video.thumbnailUrl,
                 fit: BoxFit.cover,
@@ -279,6 +254,7 @@ class _MoviePosterState extends State<_MoviePoster> {
                 errorWidget: (_, __, ___) =>
                     Container(color: RColors.bgCard),
               ),
+
               // Gradient
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -286,10 +262,11 @@ class _MoviePosterState extends State<_MoviePoster> {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [Color(0xEE050508), Colors.transparent],
-                    stops: [0.0, 0.6],
+                    stops: [0.0, 0.55],
                   ),
                 ),
               ),
+
               // Title
               Positioned(
                 bottom: 10,
@@ -302,13 +279,14 @@ class _MoviePosterState extends State<_MoviePoster> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // Long press preview indicator
+
+              // Long press preview overlay
               if (_longPressed)
                 Container(
-                  color: Colors.black38,
+                  color: Colors.black45,
                   child: const Center(
                     child: Icon(Icons.play_circle_outline_rounded,
-                        color: Colors.white, size: 48),
+                        color: Colors.white, size: 52),
                   ),
                 ),
             ],
@@ -316,14 +294,50 @@ class _MoviePosterState extends State<_MoviePoster> {
         ),
       )
           .animate()
-          .fadeIn(delay: Duration(milliseconds: widget.index * 40))
+          .fadeIn(
+            delay: Duration(milliseconds: widget.index * 35),
+            duration: RDur.md,
+          )
           .slideY(
-            begin: 0.1,
+            begin: 0.08,
             end: 0,
-            delay: Duration(milliseconds: widget.index * 40),
+            delay: Duration(milliseconds: widget.index * 35),
             duration: RDur.lg,
             curve: RCurve.spring,
           ),
+    );
+  }
+}
+
+class _EmptySearch extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: RColors.bgRaised,
+              border: Border.all(color: RColors.glassBorder),
+            ),
+            child: const Icon(Icons.search_off_rounded,
+                color: RColors.text3, size: 30),
+          ),
+          const SizedBox(height: 16),
+          Text('No results found',
+              style: RText.body(
+                  size: 15,
+                  weight: FontWeight.w600,
+                  color: RColors.text2)),
+          const SizedBox(height: 6),
+          Text('Try a different search',
+              style: RText.body(size: 13, color: RColors.text3)),
+        ],
+      ),
     );
   }
 }
