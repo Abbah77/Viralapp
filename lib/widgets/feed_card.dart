@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../controllers/feed_controller.dart';
 import '../controllers/player_controller.dart';
+import '../controllers/settings_controller.dart';
 import '../theme/tokens.dart';
 import '../screens/player_screen.dart';
 
@@ -56,8 +57,7 @@ class _FeedCardState extends State<FeedCard>
 
   void _onTap() {
     HapticFeedback.selectionClick();
-    final fc = context.read<FeedController>();
-    fc.togglePlay(widget.index);
+    context.read<FeedController>().togglePlay(widget.index);
     setState(() => _showPause = true);
     Future.delayed(800.ms, () {
       if (mounted) setState(() => _showPause = false);
@@ -67,24 +67,28 @@ class _FeedCardState extends State<FeedCard>
   void _goToPlayer() {
     HapticFeedback.mediumImpact();
     final movie = MovieModel.fromVideo(widget.video);
+    final settings = context.read<SettingsController>();
     Navigator.of(context).push(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, __, ___) => ChangeNotifierProvider(
-          create: (_) => PlayerController(movie: movie),
+        transitionDuration: const Duration(milliseconds: 480),
+        pageBuilder: (_, __, ___) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => PlayerController(movie: movie),
+            ),
+            ChangeNotifierProvider.value(value: settings),
+          ],
           child: const PlayerScreen(),
         ),
-        transitionsBuilder: (_, anim, __, child) {
-          return FadeTransition(
-            opacity: anim,
-            child: ScaleTransition(
-              scale: Tween(begin: 0.92, end: 1.0).animate(
-                CurvedAnimation(parent: anim, curve: RCurve.spring),
-              ),
-              child: child,
+        transitionsBuilder: (_, anim, __, child) => FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.94, end: 1.0).animate(
+              CurvedAnimation(parent: anim, curve: RCurve.spring),
             ),
-          );
-        },
+            child: child,
+          ),
+        ),
       ),
     );
   }
@@ -100,7 +104,7 @@ class _FeedCardState extends State<FeedCard>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Thumbnail
+            // ── Thumbnail ─────────────────────────────────────
             CachedNetworkImage(
               imageUrl: widget.video.thumbnailUrl,
               fit: BoxFit.cover,
@@ -109,7 +113,7 @@ class _FeedCardState extends State<FeedCard>
               errorWidget: (_, __, ___) => Container(color: RColors.bgCard),
             ),
 
-            // Video
+            // ── Video ─────────────────────────────────────────
             if (_vc != null)
               Hero(
                 tag: 'video_${widget.video.id}',
@@ -120,31 +124,28 @@ class _FeedCardState extends State<FeedCard>
                 ),
               ),
 
-            // Bottom gradient
+            // ── Gradients ─────────────────────────────────────
             const Positioned(
-              bottom: 0, left: 0, right: 0, height: 400,
+              bottom: 0, left: 0, right: 0, height: 420,
               child: DecoratedBox(
                 decoration: BoxDecoration(gradient: RColors.overlayBottom),
               ),
             ),
-
-            // Top gradient
             const Positioned(
-              top: 0, left: 0, right: 0, height: 120,
+              top: 0, left: 0, right: 0, height: 100,
               child: DecoratedBox(
                 decoration: BoxDecoration(gradient: RColors.overlayTop),
               ),
             ),
 
-            // Play/Pause flash
+            // ── Play/Pause Flash ───────────────────────────────
             if (_showPause)
               Center(
                 child: ClipOval(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
-                      width: 72,
-                      height: 72,
+                      width: 72, height: 72,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: RColors.glass,
@@ -173,10 +174,11 @@ class _FeedCardState extends State<FeedCard>
                   .then(delay: 400.ms)
                   .fadeOut(duration: RDur.md),
 
-            // Right actions
+            // ── Right Actions — fixed position ─────────────────
+            // bottom: 110 aligns with bottom info block
             Positioned(
               right: 12,
-              bottom: 100,
+              bottom: 110,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -192,13 +194,13 @@ class _FeedCardState extends State<FeedCard>
                       setState(() => _liked = !_liked);
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
                   _ActionBtn(
                     icon: Icons.share_rounded,
                     label: 'Share',
                     onTap: () => HapticFeedback.lightImpact(),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
                   _ActionBtn(
                     icon: _saved
                         ? Icons.bookmark_rounded
@@ -214,53 +216,34 @@ class _FeedCardState extends State<FeedCard>
                 ],
               )
                   .animate()
-                  .fadeIn(delay: 200.ms, duration: RDur.lg)
+                  .fadeIn(delay: 150.ms, duration: RDur.lg)
                   .slideX(
-                    begin: 0.5,
-                    end: 0,
-                    delay: 200.ms,
+                    begin: 0.5, end: 0,
+                    delay: 150.ms,
                     duration: RDur.lg,
                     curve: RCurve.spring,
                   ),
             ),
 
-            // Bottom info
+            // ── Bottom Info — title + watch btn ────────────────
             Positioned(
               left: 16,
               right: 76,
-              bottom: 86,
+              bottom: 80,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Title
+                  // Title only — no hashtags
                   Text(
                     widget.video.caption,
-                    style: RText.body(
-                      size: 15,
-                      weight: FontWeight.w700,
-                    ),
+                    style: RText.body(size: 15, weight: FontWeight.w700),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
-
-                  // Hashtags
-                  if (widget.video.hashtags.isNotEmpty)
-                    Text(
-                      widget.video.hashtags,
-                      style: RText.body(
-                        size: 12,
-                        color: RColors.brand,
-                        weight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
                   const SizedBox(height: 14),
 
-                  // Watch Episode button
+                  // Watch Episode 1 button
                   GestureDetector(
                     onTap: _goToPlayer,
                     child: Container(
@@ -275,7 +258,7 @@ class _FeedCardState extends State<FeedCard>
                           BoxShadow(
                             color: RColors.brand.withOpacity(0.5),
                             blurRadius: 20,
-                            spreadRadius: 2,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
@@ -288,9 +271,7 @@ class _FeedCardState extends State<FeedCard>
                           Text(
                             'Watch Episode 1',
                             style: RText.body(
-                              size: 13,
-                              weight: FontWeight.w700,
-                            ),
+                                size: 13, weight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -298,11 +279,11 @@ class _FeedCardState extends State<FeedCard>
                   )
                       .animate(onPlay: (c) => c.repeat(reverse: true))
                       .boxShadow(
-                        duration: 1500.ms,
+                        duration: 1600.ms,
                         begin: const BoxShadow(
                           color: Color(0x660090FF),
                           blurRadius: 20,
-                          spreadRadius: 2,
+                          spreadRadius: 1,
                         ),
                         end: const BoxShadow(
                           color: Color(0xAA0090FF),
@@ -313,11 +294,10 @@ class _FeedCardState extends State<FeedCard>
                 ],
               )
                   .animate()
-                  .fadeIn(delay: 100.ms, duration: RDur.lg)
+                  .fadeIn(delay: 80.ms, duration: RDur.lg)
                   .slideY(
-                    begin: 0.3,
-                    end: 0,
-                    delay: 100.ms,
+                    begin: 0.2, end: 0,
+                    delay: 80.ms,
                     duration: RDur.lg,
                     curve: RCurve.spring,
                   ),
@@ -328,6 +308,8 @@ class _FeedCardState extends State<FeedCard>
     );
   }
 }
+
+// ── Action Button ─────────────────────────────────────────────────────────────
 
 class _ActionBtn extends StatefulWidget {
   final IconData icon;
@@ -361,7 +343,7 @@ class _ActionBtnState extends State<_ActionBtn> {
       },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
-        scale: _pressed ? 0.85 : 1.0,
+        scale: _pressed ? 0.84 : 1.0,
         duration: RDur.xs,
         curve: RCurve.spring,
         child: Column(
@@ -370,7 +352,8 @@ class _ActionBtnState extends State<_ActionBtn> {
             ClipOval(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
+                child: AnimatedContainer(
+                  duration: RDur.md,
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
@@ -380,14 +363,14 @@ class _ActionBtnState extends State<_ActionBtn> {
                         : RColors.glass,
                     border: Border.all(
                       color: widget.glow != null
-                          ? widget.glow!.withOpacity(0.35)
+                          ? widget.glow!.withOpacity(0.4)
                           : RColors.glassBorder,
                     ),
                     boxShadow: widget.glow != null
                         ? [
                             BoxShadow(
                               color: widget.glow!.withOpacity(0.4),
-                              blurRadius: 16,
+                              blurRadius: 18,
                               spreadRadius: 2,
                             )
                           ]
