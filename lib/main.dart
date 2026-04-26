@@ -4,16 +4,13 @@ import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'controllers/settings_controller.dart';
 import 'screens/feed_screen.dart';
-import 'screens/profile_screen.dart';
 import 'theme/tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -24,7 +21,6 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsController()),
-        ChangeNotifierProvider(create: (_) => SavedVideos()),
       ],
       child: const ReelzApp(),
     ),
