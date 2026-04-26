@@ -9,31 +9,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Video player - fastest
   media_kit: ^1.1.10
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
-
-  # HTTP
   dio: ^5.4.0
-
-  # Image caching
   cached_network_image: ^3.3.1
-
-  # State
   provider: ^6.1.1
-
-  # Animations
   flutter_animate: ^4.5.0
-
-  # Fonts
   google_fonts: ^6.2.1
-
-  # Brightness control
   screen_brightness: ^0.2.2+1
-
-  # Keep screen on during playback
   wakelock_plus: ^1.2.5
 
 dev_dependencies:
