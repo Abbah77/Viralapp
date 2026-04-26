@@ -94,7 +94,7 @@ class _FeedViewState extends State<_FeedView> {
 
             if (ctrl.isLoading)
               const _FeedSkeleton()
-            else if (ctrl.error != null && ctrl.videos.isEmpty)
+            else if (ctrl.error != null && ctrl.movies.isEmpty)
               _ErrorView(onRetry: ctrl.refresh)
             else
               RefreshIndicator(
@@ -104,21 +104,21 @@ class _FeedViewState extends State<_FeedView> {
                 child: PageView.builder(
                   controller: _pageCtrl,
                   scrollDirection: Axis.vertical,
-                  itemCount: ctrl.videos.length,
+                  itemCount: ctrl.movies.length,
                   onPageChanged: ctrl.onPageChanged,
                   physics: const PageScrollPhysics(),
                   itemBuilder: (_, i) => ChangeNotifierProvider.value(
                     value: ctrl,
                     child: FeedCard(
-                      key: ValueKey(ctrl.videos[i].id),
-                      video: ctrl.videos[i],
+                      key: ValueKey(ctrl.movies[i].id),
+                      movie: ctrl.movies[i],
                       index: i,
                     ),
                   ),
                 ),
               ),
 
-            // Top bar — wordmark + search only, no tabs
+            // Top bar
             if (!ctrl.isLoading) const _TopBar(),
           ],
         );
@@ -157,15 +157,13 @@ class _TopBar extends StatelessWidget {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                       child: Container(
-                        width: 38,
-                        height: 38,
+                        width: 38, height: 38,
                         decoration: BoxDecoration(
                           color: RColors.glass,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: RColors.glassBorder),
                         ),
-                        child: const Icon(Icons.search_rounded,
-                            color: RColors.text, size: 20),
+                        child: const Icon(Icons.search_rounded, color: RColors.text, size: 20),
                       ),
                     ),
                   ),
@@ -197,9 +195,7 @@ class _BottomNav extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: RColors.bg.withOpacity(0.85),
-            border: Border(
-              top: BorderSide(color: RColors.glassBorder, width: 0.5),
-            ),
+            border: Border(top: BorderSide(color: RColors.glassBorder, width: 0.5)),
           ),
           child: SafeArea(
             top: false,
@@ -257,10 +253,7 @@ class _NavBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
+      onTap: () { HapticFeedback.selectionClick(); onTap(); },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 80,
@@ -277,12 +270,7 @@ class _NavBtn extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 3),
-            Text(
-              label,
-              style: RText.label(
-                color: active ? RColors.brand : RColors.text3,
-              ),
-            ),
+            Text(label, style: RText.label(color: active ? RColors.brand : RColors.text3)),
           ],
         ),
       ),
@@ -290,7 +278,7 @@ class _NavBtn extends StatelessWidget {
   }
 }
 
-// ── Feed Skeleton ──────────────────────────────────────────────────────────────
+// ── Feed Skeleton ─────────────────────────────────────────────────────────────
 
 class _FeedSkeleton extends StatelessWidget {
   const _FeedSkeleton();
@@ -300,98 +288,67 @@ class _FeedSkeleton extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Video bg shimmer
         Container(color: RColors.bgCard)
             .animate(onPlay: (c) => c.repeat())
             .shimmer(duration: 1400.ms, color: RColors.glassMd),
 
-        // Bottom gradient
         const Positioned(
-          bottom: 0, left: 0, right: 0, height: 400,
-          child: DecoratedBox(
-            decoration: BoxDecoration(gradient: RColors.overlayBottom),
-          ),
+          bottom: 0, left: 0, right: 0, height: 420,
+          child: DecoratedBox(decoration: BoxDecoration(gradient: RColors.overlayBottom)),
         ),
 
-        // Right actions skeleton — exact position as real actions
+        // Actions skeleton
         Positioned(
-          right: 14,
-          bottom: 110,
+          right: 14, bottom: 110,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(3, (i) => Padding(
               padding: const EdgeInsets.only(bottom: 22),
-              child: Column(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: RColors.glass,
-                      border: Border.all(color: RColors.glassBorder),
-                    ),
-                  )
-                      .animate(onPlay: (c) => c.repeat())
-                      .shimmer(
-                        delay: Duration(milliseconds: i * 120),
-                        duration: 1400.ms,
-                        color: RColors.glassMd,
-                      ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 28, height: 8,
-                    decoration: BoxDecoration(
-                      color: RColors.glass,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+              child: Column(children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: RColors.glass,
+                    border: Border.all(color: RColors.glassBorder),
                   ),
-                ],
-              ),
+                ).animate(onPlay: (c) => c.repeat())
+                    .shimmer(delay: Duration(milliseconds: i * 120), duration: 1400.ms, color: RColors.glassMd),
+                const SizedBox(height: 6),
+                Container(
+                  width: 28, height: 8,
+                  decoration: BoxDecoration(color: RColors.glass, borderRadius: BorderRadius.circular(4)),
+                ),
+              ]),
             )),
           ),
         ),
 
-        // Bottom left — title + watch button skeleton
+        // Title + button skeleton
         Positioned(
-          left: 16,
-          right: 80,
-          bottom: 100,
+          left: 16, right: 80, bottom: 100,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: double.infinity, height: 16,
-                decoration: BoxDecoration(
-                  color: RColors.glass,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              )
+              Container(width: double.infinity, height: 16,
+                decoration: BoxDecoration(color: RColors.glass, borderRadius: BorderRadius.circular(8)))
                   .animate(onPlay: (c) => c.repeat())
                   .shimmer(duration: 1400.ms, color: RColors.glassMd),
               const SizedBox(height: 8),
-              Container(
-                width: 160, height: 16,
-                decoration: BoxDecoration(
-                  color: RColors.glass,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              )
+              Container(width: 160, height: 16,
+                decoration: BoxDecoration(color: RColors.glass, borderRadius: BorderRadius.circular(8)))
                   .animate(onPlay: (c) => c.repeat())
                   .shimmer(delay: 100.ms, duration: 1400.ms, color: RColors.glassMd),
               const SizedBox(height: 16),
-              Container(
-                width: 160, height: 38,
+              Container(width: 160, height: 38,
                 decoration: BoxDecoration(
                   color: RColors.brand.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: RColors.brand.withOpacity(0.25)),
-                ),
-              )
+                ))
                   .animate(onPlay: (c) => c.repeat())
-                  .shimmer(delay: 200.ms, duration: 1400.ms,
-                      color: RColors.brand.withOpacity(0.08)),
+                  .shimmer(delay: 200.ms, duration: 1400.ms, color: RColors.brand.withOpacity(0.08)),
             ],
           ),
         ),
@@ -419,31 +376,23 @@ class _ErrorView extends StatelessWidget {
               color: RColors.bgRaised,
               border: Border.all(color: RColors.glassBorder),
             ),
-            child: const Icon(Icons.wifi_off_rounded,
-                color: RColors.text3, size: 30),
+            child: const Icon(Icons.wifi_off_rounded, color: RColors.text3, size: 30),
           ),
           const SizedBox(height: 16),
-          Text('Could not load',
-              style: RText.body(size: 16, weight: FontWeight.w700)),
+          Text('Could not load', style: RText.body(size: 16, weight: FontWeight.w700)),
           const SizedBox(height: 8),
-          Text('Check your connection',
-              style: RText.body(size: 13, color: RColors.text3)),
+          Text('Check your connection', style: RText.body(size: 13, color: RColors.text3)),
           const SizedBox(height: 28),
           GestureDetector(
             onTap: onRetry,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [RColors.brand, RColors.brand2]),
+                gradient: const LinearGradient(colors: [RColors.brand, RColors.brand2]),
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                      color: RColors.brand.withOpacity(0.4), blurRadius: 16)
-                ],
+                boxShadow: [BoxShadow(color: RColors.brand.withOpacity(0.4), blurRadius: 16)],
               ),
-              child: Text('Try Again',
-                  style: RText.body(size: 14, weight: FontWeight.w700)),
+              child: Text('Try Again', style: RText.body(size: 14, weight: FontWeight.w700)),
             ),
           ),
         ],
