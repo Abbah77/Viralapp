@@ -4,15 +4,17 @@ import '../models/models.dart';
 import '../services/api_service.dart';
 
 class FeedController extends ChangeNotifier {
-  final List<VideoModel> _videos = [];
+  final List<MovieCard> _movies = [];
   final Map<int, Player> _players = {};
 
   int _currentIndex = 0;
+  int? _nextCursor;
+  bool _hasMore = true;
   bool _isLoading = false;
   bool _isFetchingMore = false;
   String? _error;
 
-  List<VideoModel> get videos => _videos;
+  List<MovieCard> get movies => _movies;
   int get currentIndex => _currentIndex;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -20,51 +22,74 @@ class FeedController extends ChangeNotifier {
   Future<void> init() async {
     _isLoading = true;
     notifyListeners();
-    await _fetch(page: 1);
+    await _fetch();
     _isLoading = false;
     notifyListeners();
-    if (_videos.isNotEmpty) {
-      await _initPlayer(0);
-      await _initPlayer(1);
+    if (_movies.isNotEmpty) {
+      _initTrailer(0);
+      _initTrailer(1);
       _players[0]?.play();
     }
   }
 
-  Future<void> _fetch({required int page}) async {
+  Future<void> _fetch() async {
     try {
-      final r = await ApiService.getFeed(page: page);
-      _videos.addAll(r.videos);
+      final r = await ApiService.getFeed(cursor: _nextCursor, limit: 10);
+      _movies.addAll(r.data);
+      _nextCursor = r.nextCursor;
+      _hasMore = r.hasMore;
       _error = null;
     } catch (e) {
-      _error = 'Could not load. Pull to refresh.';
+      _error = 'Could not load feed';
     }
   }
 
   Future<void> onPageChanged(int index) async {
     _players[_currentIndex]?.pause();
     _currentIndex = index;
-    await _initPlayer(index);
+
+    await _initTrailer(index);
     _players[index]?.play();
+
+    // Preload next 2
     for (int i = 1; i <= 2; i++) {
-      if (index + i < _videos.length) _initPlayer(index + i);
+      if (index + i < _movies.length) _initTrailer(index + i);
     }
+
     _cleanup(index);
-    if (index >= _videos.length - 5 && !_isFetchingMore) _fetchMore();
+
+    // Fetch more near end
+    if (index >= _movies.length - 3 && _hasMore && !_isFetchingMore) {
+      _fetchMore();
+    }
+
     notifyListeners();
   }
 
-  Future<void> _initPlayer(int i) async {
-    if (_players.containsKey(i) || i >= _videos.length || i < 0) return;
+  Future<void> _initTrailer(int i) async {
+    if (_players.containsKey(i)) return;
+    if (i >= _movies.length || i < 0) return;
+
+    final movie = _movies[i];
+    final url = movie.trailerUrl;
+
+    // Skip if no trailer URL
+    if (url == null || url.isEmpty) return;
+
     final p = Player(
-      configuration: const PlayerConfiguration(bufferSize: 32 * 1024 * 1024),
+      configuration: const PlayerConfiguration(
+        bufferSize: 16 * 1024 * 1024, // 16MB — trailers are small
+      ),
     );
     _players[i] = p;
-    await p.open(Media(_videos[i].videoUrl), play: false);
+    await p.open(Media(url), play: false);
     await p.setPlaylistMode(PlaylistMode.loop);
   }
 
   void _cleanup(int current) {
-    final far = _players.keys.where((i) => (i - current).abs() > 4).toList();
+    final far = _players.keys
+        .where((i) => (i - current).abs() > 4)
+        .toList();
     for (final i in far) {
       _players[i]?.dispose();
       _players.remove(i);
@@ -73,7 +98,7 @@ class FeedController extends ChangeNotifier {
 
   Future<void> _fetchMore() async {
     _isFetchingMore = true;
-    await _fetch(page: (_videos.length ~/ 20) + 1);
+    await _fetch();
     _isFetchingMore = false;
     notifyListeners();
   }
@@ -81,8 +106,10 @@ class FeedController extends ChangeNotifier {
   Future<void> refresh() async {
     for (final p in _players.values) p.dispose();
     _players.clear();
-    _videos.clear();
+    _movies.clear();
     _currentIndex = 0;
+    _nextCursor = null;
+    _hasMore = true;
     await init();
   }
 
