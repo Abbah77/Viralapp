@@ -1,19 +1,12 @@
 import 'package:flutter/foundation.dart';
 
 class SettingsController extends ChangeNotifier {
-  bool _autoNextEpisode = true;
-  String _videoQuality = 'Auto';
+  bool _autoNext = true;
+  String _quality = 'Auto';
 
-  bool get autoNextEpisode => _autoNextEpisode;
-  String get videoQuality => _videoQuality;
+  bool get autoNext => _autoNext;
+  String get quality => _quality;
 
-  void setAutoNextEpisode(bool val) {
-    _autoNextEpisode = val;
-    notifyListeners();
-  }
-
-  void setVideoQuality(String val) {
-    _videoQuality = val;
-    notifyListeners();
-  }
+  void setAutoNext(bool v) { _autoNext = v; notifyListeners(); }
+  void setQuality(String v) { _quality = v; notifyListeners(); }
 }
