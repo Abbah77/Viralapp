@@ -1,103 +1,90 @@
-class VideoModel {
-    final String id;
-    final String videoUrl;
-    final String thumbnailUrl;
-    final String caption;
-    final String hashtags;
-  
-    VideoModel({
-      required this.id,
-      required this.videoUrl,
-      required this.thumbnailUrl,
-      required this.caption,
-      required this.hashtags,
-    });
-  
-    factory VideoModel.fromJson(Map<String, dynamic> j) => VideoModel(
-          id: j['id']?.toString() ?? '',
-          videoUrl: j['video_url']?.toString() ?? '',
-          thumbnailUrl: j['thumbnail_url']?.toString() ?? '',
-          caption: j['caption']?.toString() ?? '',
-          hashtags: j['hashtags']?.toString() ?? '',
-        );
-  }
-  
-  class EpisodeModel {
-    final int number;
-    final int startSec;
-    final int endSec;
-  
-    EpisodeModel({
-      required this.number,
-      required this.startSec,
-      required this.endSec,
-    });
-  }
-  
-  class MovieModel {
-    final String id;
-    final String title;
-    final String thumbnailUrl;
-    final String videoUrl;
-    final String hashtags;
-    final int durationSecs;
-    final List<EpisodeModel> episodes;
-  
-    MovieModel({
-      required this.id,
-      required this.title,
-      required this.thumbnailUrl,
-      required this.videoUrl,
-      required this.hashtags,
-      required this.durationSecs,
-      required this.episodes,
-    });
-  
-    factory MovieModel.fromVideo(VideoModel v) {
-      final dur = 7200; // default 2hrs fallback
-      const chunkSecs = 300; // 5min episodes
-      final eps = <EpisodeModel>[];
-      int ep = 1;
-      for (int s = 0; s < dur; s += chunkSecs) {
-        eps.add(EpisodeModel(
-          number: ep++,
-          startSec: s,
-          endSec: (s + chunkSecs).clamp(0, dur),
-        ));
-      }
-      return MovieModel(
-        id: v.id,
-        title: v.caption,
-        thumbnailUrl: v.thumbnailUrl,
-        videoUrl: v.videoUrl,
-        hashtags: v.hashtags,
-        durationSecs: dur,
-        episodes: eps,
-      );
-    }
-  }
-  
-  class FeedResponse {
-    final int page;
-    final int nextPage;
-    final List<VideoModel> videos;
-    final List<VideoModel> preloadUrls;
-  
-    FeedResponse({
-      required this.page,
-      required this.nextPage,
-      required this.videos,
-      required this.preloadUrls,
-    });
-  
-    factory FeedResponse.fromJson(Map<String, dynamic> j) => FeedResponse(
-          page: j['page'] ?? 1,
-          nextPage: j['next_page'] ?? 2,
-          videos: (j['videos'] as List? ?? [])
-              .map((v) => VideoModel.fromJson(v))
-              .toList(),
-          preloadUrls: (j['preload_urls'] as List? ?? [])
-              .map((v) => VideoModel.fromJson(v))
-              .toList(),
-        );
-  }
+// ── Movie from /feed ──────────────────────────────────────────────────────────
+class MovieCard {
+  final int id;
+  final String title;
+  final String slug;
+  final String? thumbnailUrl;
+  final String? trailerUrl;
+
+  MovieCard({
+    required this.id,
+    required this.title,
+    required this.slug,
+    this.thumbnailUrl,
+    this.trailerUrl,
+  });
+
+  factory MovieCard.fromJson(Map<String, dynamic> j) => MovieCard(
+    id: j['id'] is int ? j['id'] : int.tryParse(j['id'].toString()) ?? 0,
+    title: j['title']?.toString() ?? '',
+    slug: j['slug']?.toString() ?? '',
+    thumbnailUrl: j['thumbnail_url']?.toString(),
+    trailerUrl: j['trailer_url']?.toString(),
+  );
+
+  bool get hasTrailer => trailerUrl != null && trailerUrl!.isNotEmpty;
+  bool get hasThumbnail => thumbnailUrl != null && thumbnailUrl!.isNotEmpty;
+}
+
+// ── Episode from /movie/{slug} ────────────────────────────────────────────────
+class EpisodeModel {
+  final int id;
+  final int number;
+  final String url;
+
+  EpisodeModel({
+    required this.id,
+    required this.number,
+    required this.url,
+  });
+
+  factory EpisodeModel.fromJson(Map<String, dynamic> j) => EpisodeModel(
+    id: j['id'] is int ? j['id'] : int.tryParse(j['id'].toString()) ?? 0,
+    number: j['episode_number'] is int
+        ? j['episode_number']
+        : int.tryParse(j['episode_number'].toString()) ?? 1,
+    url: j['url']?.toString() ?? '',
+  );
+}
+
+// ── Full movie detail ─────────────────────────────────────────────────────────
+class MovieDetail {
+  final MovieCard movie;
+  final List<EpisodeModel> episodes;
+  final int totalEpisodes;
+
+  MovieDetail({
+    required this.movie,
+    required this.episodes,
+    required this.totalEpisodes,
+  });
+
+  factory MovieDetail.fromJson(Map<String, dynamic> j) => MovieDetail(
+    movie: MovieCard.fromJson(j['movie'] as Map<String, dynamic>),
+    episodes: (j['episodes'] as List? ?? [])
+        .map((e) => EpisodeModel.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    totalEpisodes: j['total_episodes'] as int? ?? 0,
+  );
+}
+
+// ── Feed response ─────────────────────────────────────────────────────────────
+class FeedResponse {
+  final List<MovieCard> data;
+  final int? nextCursor;
+  final bool hasMore;
+
+  FeedResponse({
+    required this.data,
+    this.nextCursor,
+    required this.hasMore,
+  });
+
+  factory FeedResponse.fromJson(Map<String, dynamic> j) => FeedResponse(
+    data: (j['data'] as List? ?? [])
+        .map((m) => MovieCard.fromJson(m as Map<String, dynamic>))
+        .toList(),
+    nextCursor: j['next_cursor'] as int?,
+    hasMore: j['has_more'] as bool? ?? false,
+  );
+}
