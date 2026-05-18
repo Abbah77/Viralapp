@@ -99,9 +99,9 @@ class PlayerController extends ChangeNotifier {
   }
 
   void _onEpisodeCompleted() {
-    if (_currentEp < episodes.length - 1) {
-      playEpisode(_currentEp + 1);
-    }
+    // Auto-next is handled by the UI countdown banner — just notify listeners
+    // so the banner can detect progress >= 0.999
+    notifyListeners();
   }
 
   Future<void> playEpisode(int index) async {

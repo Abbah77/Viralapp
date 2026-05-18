@@ -6,6 +6,8 @@ import '../services/api_service.dart';
 class FeedController extends ChangeNotifier {
   final List<MovieCard> _movies = [];
   final Map<int, Player> _players = {};
+  // Cache prefetched movie details so player opens instantly
+  final Map<String, MovieDetail> _detailCache = {};
 
   int _currentIndex = 0;
   int? _nextCursor;
@@ -13,24 +15,43 @@ class FeedController extends ChangeNotifier {
   bool _isLoading = false;
   bool _isFetchingMore = false;
   String? _error;
+  bool _isWakingUp = false; // shown when server is cold-starting
 
   List<MovieCard> get movies => _movies;
   int get currentIndex => _currentIndex;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isWakingUp => _isWakingUp;
 
   Future<void> init() async {
     _isLoading = true;
+    _isWakingUp = false;
+    _error = null;
     notifyListeners();
+
+    // Give a moment then show "waking up" hint if still loading
+    Future.delayed(const Duration(seconds: 5), () {
+      if (_isLoading && mounted) {
+        _isWakingUp = true;
+        notifyListeners();
+      }
+    });
+
     await _fetch();
     _isLoading = false;
+    _isWakingUp = false;
     notifyListeners();
     if (_movies.isNotEmpty) {
       _initTrailer(0);
       _initTrailer(1);
       _players[0]?.play();
+      // Prefetch first card's detail in background
+      _prefetchDetail(0);
+      _prefetchDetail(1);
     }
   }
+
+  bool get mounted => true; // ChangeNotifier doesn't have mounted; guard via _isLoading
 
   Future<void> _fetch() async {
     try {
@@ -44,6 +65,24 @@ class FeedController extends ChangeNotifier {
     }
   }
 
+  /// Silently prefetch movie detail into cache so Watch is instant
+  void _prefetchDetail(int i) {
+    if (i >= _movies.length || i < 0) return;
+    final slug = _movies[i].slug;
+    if (_detailCache.containsKey(slug)) return;
+    ApiService.getMovie(slug).then((detail) {
+      _detailCache[slug] = detail;
+    }).catchError((_) {}); // silent — we'll fetch on demand if this fails
+  }
+
+  /// Returns cached detail instantly or fetches it (fallback)
+  Future<MovieDetail> getDetail(String slug) async {
+    if (_detailCache.containsKey(slug)) return _detailCache[slug]!;
+    final detail = await ApiService.getMovie(slug);
+    _detailCache[slug] = detail;
+    return detail;
+  }
+
   Future<void> onPageChanged(int index) async {
     _players[_currentIndex]?.pause();
     _currentIndex = index;
@@ -51,9 +90,14 @@ class FeedController extends ChangeNotifier {
     await _initTrailer(index);
     _players[index]?.play();
 
-    // Preload next 2
+    // Preload next 2 trailers
     for (int i = 1; i <= 2; i++) {
       if (index + i < _movies.length) _initTrailer(index + i);
+    }
+
+    // Prefetch next 3 movie details in background
+    for (int i = 0; i <= 3; i++) {
+      if (index + i < _movies.length) _prefetchDetail(index + i);
     }
 
     _cleanup(index);
@@ -73,12 +117,11 @@ class FeedController extends ChangeNotifier {
     final movie = _movies[i];
     final url = movie.trailerUrl;
 
-    // Skip if no trailer URL
     if (url == null || url.isEmpty) return;
 
     final p = Player(
       configuration: const PlayerConfiguration(
-        bufferSize: 16 * 1024 * 1024, // 16MB — trailers are small
+        bufferSize: 16 * 1024 * 1024,
       ),
     );
     _players[i] = p;
@@ -107,6 +150,7 @@ class FeedController extends ChangeNotifier {
     for (final p in _players.values) p.dispose();
     _players.clear();
     _movies.clear();
+    _detailCache.clear();
     _currentIndex = 0;
     _nextCursor = null;
     _hasMore = true;
