@@ -286,8 +286,8 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                   ).animate(onPlay: (c) => c.repeat(reverse: true))
                       .boxShadow(
                         duration: 1800.ms,
-                        begin: const BoxShadow(color: Color(0x556C63FF), blurRadius: 22, spreadRadius: 1),
-                        end:   const BoxShadow(color: Color(0x996C63FF), blurRadius: 36, spreadRadius: 4),
+                        begin: const BoxShadow(color: Color(0x552196F3), blurRadius: 22, spreadRadius: 1),
+                        end:   const BoxShadow(color: Color(0x992196F3), blurRadius: 36, spreadRadius: 4),
                       ),
                 ],
               ).animate()
