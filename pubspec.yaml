@@ -19,6 +19,8 @@ dependencies:
   google_fonts: ^6.2.1
   screen_brightness: ^0.2.2+1
   wakelock_plus: ^1.2.5
+  url_launcher: ^6.2.5
+  webview_flutter: ^4.7.0
 
 dev_dependencies:
   flutter_test:
