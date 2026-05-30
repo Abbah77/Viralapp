@@ -10,9 +10,9 @@ class RColors {
 
   // ── Brand ────────────────────────────────────────────────────────────────────
   // Shifted from cold blue → warmer electric violet-blue (more cinematic)
-  static const brand     = Color(0xFF6C63FF);   // electric violet
-  static const brand2    = Color(0xFFBB86FC);   // soft lavender
-  static const brandDeep = Color(0xFF3D35CC);   // deep anchor
+  static const brand     = Color(0xFF2196F3);   // electric blue
+  static const brand2    = Color(0xFF64B5F6);   // sky blue
+  static const brandDeep = Color(0xFF0D47A1);   // deep navy blue
 
   // ── Accent / semantic ────────────────────────────────────────────────────────
   static const like      = Color(0xFFFF4F7B);   // vivid rose
@@ -64,7 +64,7 @@ class RColors {
     end: Alignment.centerRight,
   );
   static const cinemaGrad = LinearGradient(
-    colors: [Color(0xFF6C63FF), Color(0xFFBB86FC), Color(0xFF00D9B8)],
+    colors: [Color(0xFF2196F3), Color(0xFF64B5F6), Color(0xFF00D9B8)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
