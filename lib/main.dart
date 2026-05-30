@@ -14,7 +14,9 @@ void main() async {
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
     systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarContrastEnforced: false,
   ));
 
   runApp(
@@ -45,6 +47,29 @@ class ReelzApp extends StatelessWidget {
         ),
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
+        // Slider theme — applied globally
+        sliderTheme: SliderThemeData(
+          trackHeight: 2.5,
+          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+          overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+          activeTrackColor: RColors.brand,
+          inactiveTrackColor: RColors.glassMd,
+          thumbColor: Colors.white,
+          overlayColor: RColors.brand.withOpacity(0.18),
+        ),
+        // Switch theme
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected) ? Colors.white : RColors.text3),
+          trackColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected)
+                  ? RColors.brand.withOpacity(0.7)
+                  : RColors.glass),
+          trackOutlineColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected)
+                  ? Colors.transparent
+                  : RColors.glassBorderMd),
+        ),
       ),
       home: const FeedScreen(),
     );
