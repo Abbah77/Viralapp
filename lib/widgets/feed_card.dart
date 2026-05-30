@@ -10,6 +10,7 @@ import '../controllers/feed_controller.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../theme/tokens.dart';
+import '../ads/ad_engine.dart';
 import '../screens/player_screen.dart';
 
 class FeedCard extends StatefulWidget {
@@ -96,7 +97,8 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
           pageBuilder: (_, __, ___) => MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => PlayerController(
-                movie: detail.movie, episodes: detail.episodes)),
+                movie: detail.movie, episodes: detail.episodes,
+                  adEngine: context.read<AdEngine>())),
               ChangeNotifierProvider.value(value: settings),
             ],
             child: const PlayerScreen(),
