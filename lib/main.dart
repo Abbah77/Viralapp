@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'controllers/settings_controller.dart';
+import 'ads/ad_engine.dart';
 import 'screens/feed_screen.dart';
 import 'theme/tokens.dart';
 
@@ -19,10 +20,14 @@ void main() async {
     systemNavigationBarContrastEnforced: false,
   ));
 
+  // Create AdEngine and fire cold-open trigger
+  final adEngine = AdEngine()..onAppStart();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsController()),
+        ChangeNotifierProvider<AdEngine>.value(value: adEngine),
       ],
       child: const ReelzApp(),
     ),
