@@ -26,7 +26,7 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
   bool _showPause = false;
   bool _liked = false;
   bool _saved = false;
-  bool _navigating = false; // prevent double taps
+  bool _navigating = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -82,13 +82,11 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
     _navigating = true;
     HapticFeedback.mediumImpact();
 
-    // Pause the trailer
     final fc = context.read<FeedController>();
     fc.togglePlay(widget.index);
     final settings = context.read<SettingsController>();
 
     try {
-      // Use prefetched cache — should be instant
       final detail = await fc.getDetail(widget.movie.slug);
       if (!mounted) { _navigating = false; return; }
 
@@ -119,6 +117,8 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
           content: Text('Could not load movie', style: RText.body(size: 13)),
           backgroundColor: RColors.bgRaised,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
         ));
       }
     } finally {
@@ -137,7 +137,7 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Thumbnail
+            // ── Thumbnail ────────────────────────────────────────────────────
             if (widget.movie.hasThumbnail)
               CachedNetworkImage(
                 imageUrl: widget.movie.thumbnailUrl!,
@@ -149,51 +149,53 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
             else
               Container(color: RColors.bgCard),
 
-            // Trailer overlay
+            // ── Trailer overlay ───────────────────────────────────────────────
             if (_vc != null && widget.movie.hasTrailer)
               Video(controller: _vc!, controls: NoVideoControls, fit: BoxFit.cover),
 
-            // Bottom gradient
+            // ── Bottom gradient (deep cinematic) ─────────────────────────────
             const Positioned(
-              bottom: 0, left: 0, right: 0, height: 420,
+              bottom: 0, left: 0, right: 0, height: 480,
               child: DecoratedBox(decoration: BoxDecoration(gradient: RColors.overlayBottom)),
             ),
 
-            // Top gradient
+            // ── Top gradient ──────────────────────────────────────────────────
             const Positioned(
-              top: 0, left: 0, right: 0, height: 100,
+              top: 0, left: 0, right: 0, height: 120,
               child: DecoratedBox(decoration: BoxDecoration(gradient: RColors.overlayTop)),
             ),
 
-            // Play/Pause flash
+            // ── Play/Pause flash ──────────────────────────────────────────────
             if (_showPause)
               Center(
                 child: ClipOval(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                     child: Container(
-                      width: 72, height: 72,
+                      width: 76, height: 76,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: RColors.glass,
-                        border: Border.all(color: RColors.glassBorderMd),
+                        color: RColors.glassMd,
+                        border: Border.all(color: RColors.glassBorderMd, width: 1.2),
                       ),
                       child: Consumer<FeedController>(
                         builder: (_, fc, __) => Icon(
-                          fc.isPlaying(widget.index) ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                          color: RColors.text, size: 32,
+                          fc.isPlaying(widget.index)
+                              ? Icons.play_arrow_rounded
+                              : Icons.pause_rounded,
+                          color: RColors.text, size: 34,
                         ),
                       ),
                     ),
                   ),
                 ),
               ).animate()
-                  .scale(begin: const Offset(0.6, 0.6), duration: RDur.sm, curve: RCurve.spring)
+                  .scale(begin: const Offset(0.55, 0.55), duration: RDur.sm, curve: RCurve.spring)
                   .fadeIn(duration: RDur.xs)
-                  .then(delay: 400.ms)
+                  .then(delay: 380.ms)
                   .fadeOut(duration: RDur.md),
 
-            // Right side actions
+            // ── Right side action rail ────────────────────────────────────────
             Positioned(
               right: 12, bottom: 110,
               child: Column(
@@ -204,15 +206,9 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                     label: 'Like',
                     color: _liked ? RColors.like : RColors.text,
                     glow: _liked ? RColors.like : null,
-                    onTap: () { HapticFeedback.lightImpact(); setState(() => _liked = !_liked); },
-                  ),
-                  const SizedBox(height: 22),
-                  _ActionBtn(
-                    icon: Icons.comment_outlined,
-                    label: 'Comments',
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      _showCommentsSheet(context);
+                      setState(() => _liked = !_liked);
                     },
                   ),
                   const SizedBox(height: 22),
@@ -230,7 +226,10 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                     label: 'Save',
                     color: _saved ? RColors.brand : RColors.text,
                     glow: _saved ? RColors.brand : null,
-                    onTap: () { HapticFeedback.lightImpact(); setState(() => _saved = !_saved); },
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _saved = !_saved);
+                    },
                   ),
                 ],
               ).animate()
@@ -238,28 +237,40 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                   .slideX(begin: 0.5, end: 0, delay: 150.ms, duration: RDur.lg, curve: RCurve.spring),
             ),
 
-            // Bottom info
+            // ── Bottom content block ──────────────────────────────────────────
             Positioned(
               left: 16, right: 76, bottom: 80,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Title
                   Text(
                     widget.movie.title,
-                    style: RText.body(size: 15, weight: FontWeight.w700),
-                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: RText.body(size: 16, weight: FontWeight.w700),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 14),
+
+                  // CTA — pulsing glow
                   GestureDetector(
                     onTap: _goToPlayer,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [RColors.brand, RColors.brand2]),
+                        gradient: const LinearGradient(
+                          colors: [RColors.brand, RColors.brand2],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
-                          BoxShadow(color: RColors.brand.withOpacity(0.5), blurRadius: 20, spreadRadius: 1),
+                          BoxShadow(
+                            color: RColors.brand.withOpacity(0.5),
+                            blurRadius: 22,
+                            spreadRadius: 1,
+                          ),
                         ],
                       ),
                       child: Row(
@@ -267,20 +278,21 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                         children: [
                           const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18),
                           const SizedBox(width: 6),
-                          Text('Watch Episode 1', style: RText.body(size: 13, weight: FontWeight.w700)),
+                          Text('Watch Now',
+                              style: RText.body(size: 13, weight: FontWeight.w700)),
                         ],
                       ),
                     ),
                   ).animate(onPlay: (c) => c.repeat(reverse: true))
                       .boxShadow(
-                        duration: 1600.ms,
-                        begin: const BoxShadow(color: Color(0x660090FF), blurRadius: 20, spreadRadius: 1),
-                        end: const BoxShadow(color: Color(0xAA0090FF), blurRadius: 32, spreadRadius: 4),
+                        duration: 1800.ms,
+                        begin: const BoxShadow(color: Color(0x556C63FF), blurRadius: 22, spreadRadius: 1),
+                        end:   const BoxShadow(color: Color(0x996C63FF), blurRadius: 36, spreadRadius: 4),
                       ),
                 ],
               ).animate()
                   .fadeIn(delay: 80.ms, duration: RDur.lg)
-                  .slideY(begin: 0.2, end: 0, delay: 80.ms, duration: RDur.lg, curve: RCurve.spring),
+                  .slideY(begin: 0.18, end: 0, delay: 80.ms, duration: RDur.lg, curve: RCurve.spring),
             ),
           ],
         ),
@@ -289,14 +301,7 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
   }
 }
 
-void _showCommentsSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (_) => const _CommentsSheet(),
-  );
-}
+// ── Share Sheet ────────────────────────────────────────────────────────────────
 
 void _shareNative(BuildContext context) {
   showModalBottomSheet(
@@ -305,60 +310,6 @@ void _shareNative(BuildContext context) {
     builder: (_) => const _ShareSheet(),
   );
 }
-
-// ── Comments Sheet — Coming Soon ───────────────────────────────────────────────
-
-class _CommentsSheet extends StatelessWidget {
-  const _CommentsSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: RColors.bgCard.withOpacity(0.96),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(top: BorderSide(color: RColors.glassBorderMd, width: 0.8)),
-          ),
-          child: Column(
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 14),
-                  width: 38, height: 4,
-                  decoration: BoxDecoration(color: RColors.glassMd, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Text('Comments', style: RText.body(size: 16, weight: FontWeight.w700)),
-                  ],
-                ),
-              ),
-              const Expanded(
-                child: Center(
-                  child: _ComingSoonWidget(
-                    icon: Icons.comment_outlined,
-                    title: 'Comments',
-                    subtitle: 'Be the first to comment when\nwe launch this feature 🚀',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ).animate().slideY(begin: 0.3, end: 0, duration: RDur.md, curve: RCurve.spring).fadeIn(duration: RDur.sm);
-  }
-}
-
-// ── Share Sheet ────────────────────────────────────────────────────────────────
 
 class _ShareSheet extends StatelessWidget {
   const _ShareSheet();
@@ -374,28 +325,25 @@ class _ShareSheet extends StatelessWidget {
     ];
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
           decoration: BoxDecoration(
-            color: RColors.bgCard.withOpacity(0.96),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            color: RColors.bgCard.withOpacity(0.97),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: RColors.glassBorderMd, width: 0.8)),
           ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 36),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
+              Center(child: Container(
                   margin: const EdgeInsets.only(bottom: 20),
-                  width: 38, height: 4,
-                  decoration: BoxDecoration(color: RColors.glassMd, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: RColors.glassMd, borderRadius: BorderRadius.circular(2)))),
               Text('Share', style: RText.body(size: 16, weight: FontWeight.w700)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: options.map((o) => GestureDetector(
@@ -404,15 +352,15 @@ class _ShareSheet extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 54, height: 54,
+                        width: 56, height: 56,
                         decoration: BoxDecoration(
                           color: RColors.bgRaised,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: RColors.glassBorder),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: RColors.glassBorderMd),
                         ),
                         child: Icon(o.$1, color: RColors.text, size: 24),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 7),
                       Text(o.$2, style: RText.label(size: 10)),
                     ],
                   ),
@@ -448,13 +396,11 @@ class _MovieInfoSheet extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 16),
-                  width: 38, height: 4,
-                  decoration: BoxDecoration(color: RColors.glassMd, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
+              Center(child: Container(
+                margin: const EdgeInsets.only(top: 14, bottom: 18),
+                width: 36, height: 4,
+                decoration: BoxDecoration(color: RColors.glassMd, borderRadius: BorderRadius.circular(2)),
+              )),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -462,9 +408,9 @@ class _MovieInfoSheet extends StatelessWidget {
                   children: [
                     if (movie.hasThumbnail)
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         child: SizedBox(
-                          width: 90, height: 120,
+                          width: 88, height: 120,
                           child: CachedNetworkImage(
                             imageUrl: movie.thumbnailUrl!,
                             fit: BoxFit.cover,
@@ -478,14 +424,14 @@ class _MovieInfoSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(movie.title,
-                            style: RText.body(size: 16, weight: FontWeight.w700), maxLines: 3),
-                          const SizedBox(height: 8),
+                              style: RText.body(size: 16, weight: FontWeight.w700), maxLines: 3),
+                          const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: RColors.brand.withOpacity(0.15),
+                              color: RColors.brand.withOpacity(0.14),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: RColors.brand.withOpacity(0.3)),
+                              border: Border.all(color: RColors.brand.withOpacity(0.28)),
                             ),
                             child: Text('Series', style: RText.label(color: RColors.brand)),
                           ),
@@ -495,21 +441,20 @@ class _MovieInfoSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 36),
                 child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                    onWatch();
-                  },
+                  onTap: () { Navigator.pop(context); onWatch(); },
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(colors: [RColors.brand, RColors.brand2]),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: RColors.brand.withOpacity(0.4), blurRadius: 20)],
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(color: RColors.brand.withOpacity(0.4), blurRadius: 22, spreadRadius: 0),
+                      ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -530,54 +475,7 @@ class _MovieInfoSheet extends StatelessWidget {
   }
 }
 
-// ── Coming Soon Widget ─────────────────────────────────────────────────────────
-
-class _ComingSoonWidget extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  const _ComingSoonWidget({required this.icon, required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 72, height: 72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: RColors.brand.withOpacity(0.3)),
-          ),
-          child: Icon(icon, color: RColors.brand, size: 32),
-        ),
-        const SizedBox(height: 16),
-        Text(title, style: RText.body(size: 16, weight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Text(subtitle,
-          style: RText.body(size: 13, color: RColors.text3),
-          textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: RColors.brand.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: RColors.brand.withOpacity(0.3)),
-          ),
-          child: Text('Coming Soon 🚀', style: RText.body(size: 12, weight: FontWeight.w700, color: RColors.brand)),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Action button ──────────────────────────────────────────────────────────────
+// ── Action Button ──────────────────────────────────────────────────────────────
 
 class _ActionBtn extends StatefulWidget {
   final IconData icon;
@@ -605,7 +503,7 @@ class _ActionBtnState extends State<_ActionBtn> {
       onTapUp: (_) { setState(() => _pressed = false); widget.onTap?.call(); },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
-        scale: _pressed ? 0.84 : 1.0,
+        scale: _pressed ? 0.80 : 1.0,
         duration: RDur.xs,
         curve: RCurve.spring,
         child: Column(
@@ -613,18 +511,27 @@ class _ActionBtnState extends State<_ActionBtn> {
           children: [
             ClipOval(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: AnimatedContainer(
                   duration: RDur.md,
                   width: 48, height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: widget.glow != null ? widget.glow!.withOpacity(0.18) : RColors.glass,
+                    color: widget.glow != null
+                        ? widget.glow!.withOpacity(0.18)
+                        : RColors.glassMd,
                     border: Border.all(
-                      color: widget.glow != null ? widget.glow!.withOpacity(0.4) : RColors.glassBorder,
+                      color: widget.glow != null
+                          ? widget.glow!.withOpacity(0.45)
+                          : RColors.glassBorderMd,
+                      width: 1.2,
                     ),
                     boxShadow: widget.glow != null ? [
-                      BoxShadow(color: widget.glow!.withOpacity(0.4), blurRadius: 18, spreadRadius: 2),
+                      BoxShadow(
+                        color: widget.glow!.withOpacity(0.45),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
                     ] : null,
                   ),
                   child: Icon(widget.icon, color: widget.color, size: 22),
@@ -632,12 +539,10 @@ class _ActionBtnState extends State<_ActionBtn> {
               ),
             ),
             const SizedBox(height: 5),
-            Text(widget.label, style: RText.label()),
+            Text(widget.label, style: RText.label(size: 10)),
           ],
         ),
       ),
     );
   }
 }
-
-// ── CachedNetworkImage import helper (already imported above) ──────────────────
