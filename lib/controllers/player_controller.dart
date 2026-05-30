@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/models.dart';
+import '../ads/ad_engine.dart';
 
 class PlayerController extends ChangeNotifier {
   final MovieCard movie;
   final List<EpisodeModel> episodes;
+  final AdEngine? adEngine;
   late final Player _player;
 
   int _currentEp = 0;
@@ -28,6 +30,7 @@ class PlayerController extends ChangeNotifier {
     required this.movie,
     required this.episodes,
     int startEpisode = 0,
+    this.adEngine,
   }) {
     _currentEp = startEpisode;
     _player = Player(
@@ -88,6 +91,7 @@ class PlayerController extends ChangeNotifier {
 
     _player.stream.buffering.listen((b) {
       _isBuffering = b;
+      adEngine?.onBufferingChanged(b);
       notifyListeners();
     });
 
@@ -110,12 +114,20 @@ class PlayerController extends ChangeNotifier {
     _position = Duration.zero;
     _duration = Duration.zero;
     _isBuffering = true;
+    adEngine?.onEpisodeChanged();
+    adEngine?.onPlaybackStarted();
     await _player.open(Media(episodes[index].url), play: true);
     notifyListeners();
   }
 
   void togglePlayPause() {
-    _player.state.playing ? _player.pause() : _player.play();
+    if (_player.state.playing) {
+      _player.pause();
+      adEngine?.onPlaybackPaused();
+    } else {
+      _player.play();
+      adEngine?.onPlaybackStarted();
+    }
     notifyListeners();
   }
 
@@ -197,6 +209,7 @@ class PlayerController extends ChangeNotifier {
 
   Future<void> setLandscape(bool landscape) async {
     _isLandscape = landscape;
+    adEngine?.onLandscapeChanged(landscape);
     if (landscape) {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
