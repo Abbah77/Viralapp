@@ -10,6 +10,7 @@ import '../controllers/settings_controller.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/tokens.dart';
+import '../ads/ad_engine.dart';
 import '../widgets/dot_loader.dart';
 import 'player_screen.dart';
 
@@ -75,7 +76,8 @@ class _SearchScreenState extends State<SearchScreen> {
         pageBuilder: (_, __, ___) => MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (_) => PlayerController(
-              movie: detail.movie, episodes: detail.episodes)),
+              movie: detail.movie, episodes: detail.episodes,
+                  adEngine: context.read<AdEngine>())),
             ChangeNotifierProvider.value(value: settings),
           ],
           child: const PlayerScreen(),

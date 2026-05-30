@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../controllers/feed_controller.dart';
+import '../ads/ad_engine.dart';
+import '../ads/ad_wrapper.dart';
 import '../widgets/dot_loader.dart';
 import '../theme/tokens.dart';
 import '../widgets/ambient_bg.dart';
@@ -26,6 +28,10 @@ class _FeedScreenState extends State<FeedScreen> {
   void initState() {
     super.initState();
     _fc = FeedController()..init();
+    // Wire ad engine feed-visible signal after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AdEngine>().onFeedVisible();
+    });
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -42,17 +48,19 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _fc,
-      child: Scaffold(
-        backgroundColor: RColors.bg,
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        body: IndexedStack(
-          index: _navIndex,
-          children: const [_FeedView(), ExploreScreen(), ProfileScreen()],
-        ),
-        bottomNavigationBar: _BottomNav(
-          index: _navIndex,
-          onTap: (i) => setState(() => _navIndex = i),
+      child: AdWrapper(
+        child: Scaffold(
+          backgroundColor: RColors.bg,
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          body: IndexedStack(
+            index: _navIndex,
+            children: const [_FeedView(), ExploreScreen(), ProfileScreen()],
+          ),
+          bottomNavigationBar: _BottomNav(
+            index: _navIndex,
+            onTap: (i) => setState(() => _navIndex = i),
+          ),
         ),
       ),
     );
