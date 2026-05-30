@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../controllers/feed_controller.dart';
+import '../widgets/dot_loader.dart';
 import '../theme/tokens.dart';
 import '../widgets/ambient_bg.dart';
 import '../widgets/feed_card.dart';
@@ -213,41 +214,30 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.transparent,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(40, 10, 40, 14),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-              child: Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  color: RColors.bgCard.withOpacity(0.88),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: RColors.glassBorderMd),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 32,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _NavBtn(icon: Icons.movie_filter_rounded, outlineIcon: Icons.movie_filter_outlined,
-                        active: index == 0, onTap: () => onTap(0)),
-                    _NavBtn(icon: Icons.grid_view_rounded, outlineIcon: Icons.grid_view_outlined,
-                        active: index == 1, onTap: () => onTap(1)),
-                    _NavBtn(icon: Icons.person_rounded, outlineIcon: Icons.person_outline_rounded,
-                        active: index == 2, onTap: () => onTap(2)),
-                  ],
-                ),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        child: Container(
+          decoration: BoxDecoration(
+            color: RColors.bg.withOpacity(0.82),
+            border: Border(
+              top: BorderSide(color: RColors.glassBorderMd, width: 0.6),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 62,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavBtn(icon: Icons.movie_filter_rounded, outlineIcon: Icons.movie_filter_outlined,
+                      active: index == 0, onTap: () => onTap(0)),
+                  _NavBtn(icon: Icons.grid_view_rounded, outlineIcon: Icons.grid_view_outlined,
+                      active: index == 1, onTap: () => onTap(1)),
+                  _NavBtn(icon: Icons.person_rounded, outlineIcon: Icons.person_outline_rounded,
+                      active: index == 2, onTap: () => onTap(2)),
+                ],
               ),
             ),
           ),
@@ -485,12 +475,8 @@ class _FeedSkeleton extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          width: 13, height: 13,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 1.8, color: RColors.brand),
-                        ),
-                        const SizedBox(width: 10),
+                        const DotLoader(size: 26),
+                        const SizedBox(width: 12),
                         Text('Waking up server…',
                             style: RText.body(size: 12, color: RColors.text3)),
                       ],

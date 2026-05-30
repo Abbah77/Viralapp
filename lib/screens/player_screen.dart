@@ -9,6 +9,7 @@ import 'package:screen_brightness/screen_brightness.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../theme/tokens.dart';
+import '../widgets/dot_loader.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -19,6 +20,7 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen> {
   late final VideoController _vc;
   double _brightness = 0.5;
+  late final PageController _epPageCtrl;
 
   // Auto-next countdown
   bool _showAutoNext = false;
@@ -39,18 +41,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.initState();
     final ctrl = context.read<PlayerController>();
     _vc = VideoController(ctrl.player);
+    _epPageCtrl = PageController(initialPage: ctrl.currentEp);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _loadBrightness();
-
-    // Listen for episode completion to trigger auto-next
     ctrl.addListener(_onPlayerUpdate);
   }
 
   void _onPlayerUpdate() {
     final ctrl = context.read<PlayerController>();
-    // Trigger auto-next when episode completes and there's a next one
     if (ctrl.progress >= 0.999 && ctrl.currentEp < ctrl.totalEpisodes - 1 && !_showAutoNext) {
       _startAutoNextCountdown();
+    }
+    // Keep PageView in sync when episode changes from drawer or auto-next
+    if (_epPageCtrl.hasClients &&
+        _epPageCtrl.page?.round() != ctrl.currentEp) {
+      _epPageCtrl.animateToPage(
+        ctrl.currentEp,
+        duration: RDur.md,
+        curve: RCurve.spring,
+      );
     }
   }
 
@@ -63,7 +72,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (_autoNextCount <= 0) {
         t.cancel();
         final ctrl = context.read<PlayerController>();
-        ctrl.playEpisode(ctrl.currentEp + 1);
+        final next = ctrl.currentEp + 1;
+        ctrl.playEpisode(next);
+        _epPageCtrl.animateToPage(next, duration: RDur.md, curve: RCurve.spring);
         setState(() => _showAutoNext = false);
       }
     });
@@ -102,6 +113,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _autoNextTimer?.cancel();
+    _epPageCtrl.dispose();
     final ctrl = context.read<PlayerController>();
     ctrl.removeListener(_onPlayerUpdate);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -120,182 +132,175 @@ class _PlayerScreenState extends State<PlayerScreen> {
             builder: (context, orientation) {
               final isLandscapeDevice = orientation == Orientation.landscape;
 
-              return GestureDetector(
-                onTap: ctrl.isLocked ? null : ctrl.toggleControls,
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  ctrl.toggleToolsDrawer();
-                },
-                // Horizontal drag = seek scrubbing
-                onHorizontalDragStart: (d) {
-                  _seekDragStart = d.localPosition.dx;
-                  _seekDragDelta = 0;
-                  _isSeeking = true;
-                },
-                onHorizontalDragUpdate: (d) {
-                  if (!_isSeeking) return;
-                  final screenW = MediaQuery.of(context).size.width;
-                  _seekDragDelta = d.localPosition.dx - (_seekDragStart ?? 0);
-                  // Map drag across full screen = ±60s seek range
-                  final seekSecs = (_seekDragDelta / screenW) * 60;
-                  ctrl.showControlsTemporary();
-                  setState(() {}); // rerender drag indicator
-                },
-                onHorizontalDragEnd: (_) {
-                  if (!_isSeeking) return;
-                  final screenW = MediaQuery.of(context).size.width;
-                  final seekSecs = (_seekDragDelta / screenW * 60).round();
-                  ctrl.seekRelative(seekSecs);
+              // Landscape mode — single fixed player, no swipe
+              if (isLandscapeDevice) {
+                return _buildPlayerStack(context, ctrl, settings, isLandscapeDevice);
+              }
+
+              // Portrait mode — vertical PageView per episode
+              return PageView.builder(
+                controller: _epPageCtrl,
+                scrollDirection: Axis.vertical,
+                itemCount: ctrl.totalEpisodes,
+                physics: const PageScrollPhysics(),
+                onPageChanged: (i) {
                   HapticFeedback.selectionClick();
-                  setState(() { _isSeeking = false; _seekDragDelta = 0; _seekDragStart = null; });
+                  ctrl.playEpisode(i);
                 },
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Video
-                    _VideoArea(vc: _vc, ctrl: ctrl, isLandscapeDevice: isLandscapeDevice),
-
-                    // Buffering spinner
-                    if (ctrl.isBuffering)
-                      Center(
-                        child: Container(
-                          width: 52, height: 52,
-                          decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-                          child: const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(color: RColors.brand, strokeWidth: 2.5),
-                          ),
-                        ),
-                      ),
-
-                    // Double-tap zones
-                    Positioned.fill(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onDoubleTap: _onDoubleTapLeft,
-                              child: Container(color: Colors.transparent),
-                            ),
-                          ),
-                          // Center — reserve for play/pause from controls
-                          const SizedBox(width: 80),
-                          Expanded(
-                            child: GestureDetector(
-                              onDoubleTap: _onDoubleTapRight,
-                              child: Container(color: Colors.transparent),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Left seek ripple
-                    if (_showLeftRipple)
-                      Positioned(left: 24, top: 0, bottom: 0,
-                        child: Center(child: _SeekRipple(label: '-10s', isLeft: true))),
-
-                    // Right seek ripple
-                    if (_showRightRipple)
-                      Positioned(right: 24, top: 0, bottom: 0,
-                        child: Center(child: _SeekRipple(label: '+10s', isLeft: false))),
-
-                    // Drag seek indicator
-                    if (_isSeeking && _seekDragDelta.abs() > 5)
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.75),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _seekDragDelta > 0 ? Icons.fast_forward_rounded : Icons.fast_rewind_rounded,
-                                color: Colors.white, size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_seekDragDelta > 0 ? '+' : ''}${(_seekDragDelta / MediaQuery.of(context).size.width * 60).round()}s',
-                                style: RText.body(size: 16, weight: FontWeight.w700),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                    // Controls
-                    if (isLandscapeDevice)
-                      _LandscapeControls(ctrl: ctrl)
-                    else
-                      _PortraitControls(ctrl: ctrl),
-
-                    // Ultra-thin TikTok-style bottom progress bar (always visible)
-                    Positioned(
-                      bottom: 0, left: 0, right: 0,
-                      child: _ThinProgressBar(ctrl: ctrl),
-                    ),
-
-                    // Episode drawer
-                    if (ctrl.showDrawer) _EpisodeDrawer(ctrl: ctrl),
-
-                    // Tools drawer
-                    if (ctrl.showToolsDrawer)
-                      _ToolsDrawer(
-                        ctrl: ctrl,
-                        settings: settings,
-                        brightness: _brightness,
-                        onBrightnessChange: (v) async {
-                          setState(() => _brightness = v);
-                          try { await ScreenBrightness().setScreenBrightness(v); } catch (_) {}
-                        },
-                      ),
-
-                    // Auto-next countdown banner
-                    if (_showAutoNext)
-                      _AutoNextBanner(
-                        count: _autoNextCount,
-                        onCancel: _cancelAutoNext,
-                        onSkipNow: () {
-                          _cancelAutoNext();
-                          ctrl.playEpisode(ctrl.currentEp + 1);
-                        },
-                      ),
-
-                    // Lock overlay
-                    if (ctrl.isLocked)
-                      Positioned.fill(
-                        child: GestureDetector(
-                          onLongPress: ctrl.toggleLock,
-                          child: Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-                              decoration: BoxDecoration(
-                                color: RColors.bgRaised.withOpacity(0.92),
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: RColors.glassBorder),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.lock_rounded, color: RColors.text2, size: 15),
-                                  const SizedBox(width: 8),
-                                  Text('Hold to unlock', style: RText.label(color: RColors.text2)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                itemBuilder: (_, i) => _buildPlayerStack(context, ctrl, settings, isLandscapeDevice),
               );
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPlayerStack(BuildContext context, PlayerController ctrl,
+      SettingsController settings, bool isLandscapeDevice) {
+    return GestureDetector(
+      onTap: ctrl.isLocked ? null : ctrl.toggleControls,
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        ctrl.toggleToolsDrawer();
+      },
+      onHorizontalDragStart: (d) {
+        _seekDragStart = d.localPosition.dx;
+        _seekDragDelta = 0;
+        _isSeeking = true;
+      },
+      onHorizontalDragUpdate: (d) {
+        if (!_isSeeking) return;
+        final screenW = MediaQuery.of(context).size.width;
+        _seekDragDelta = d.localPosition.dx - (_seekDragStart ?? 0);
+        final seekSecs = (_seekDragDelta / screenW) * 60;
+        ctrl.showControlsTemporary();
+        setState(() {});
+      },
+      onHorizontalDragEnd: (_) {
+        if (!_isSeeking) return;
+        final screenW = MediaQuery.of(context).size.width;
+        final seekSecs = (_seekDragDelta / screenW * 60).round();
+        ctrl.seekRelative(seekSecs);
+        HapticFeedback.selectionClick();
+        setState(() { _isSeeking = false; _seekDragDelta = 0; _seekDragStart = null; });
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _VideoArea(vc: _vc, ctrl: ctrl, isLandscapeDevice: isLandscapeDevice),
+
+          if (ctrl.isBuffering)
+            const Center(child: DotLoader(size: 52)),
+
+          Positioned.fill(
+            child: Row(
+              children: [
+                Expanded(child: GestureDetector(
+                    onDoubleTap: _onDoubleTapLeft,
+                    child: Container(color: Colors.transparent))),
+                const SizedBox(width: 80),
+                Expanded(child: GestureDetector(
+                    onDoubleTap: _onDoubleTapRight,
+                    child: Container(color: Colors.transparent))),
+              ],
+            ),
+          ),
+
+          if (_showLeftRipple)
+            Positioned(left: 24, top: 0, bottom: 0,
+                child: Center(child: _SeekRipple(label: '-10s', isLeft: true))),
+
+          if (_showRightRipple)
+            Positioned(right: 24, top: 0, bottom: 0,
+                child: Center(child: _SeekRipple(label: '+10s', isLeft: false))),
+
+          if (_isSeeking && _seekDragDelta.abs() > 5)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.75),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _seekDragDelta > 0 ? Icons.fast_forward_rounded : Icons.fast_rewind_rounded,
+                      color: Colors.white, size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_seekDragDelta > 0 ? '+' : ''}${(_seekDragDelta / MediaQuery.of(context).size.width * 60).round()}s',
+                      style: RText.body(size: 16, weight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          if (isLandscapeDevice)
+            _LandscapeControls(ctrl: ctrl)
+          else
+            _PortraitControls(ctrl: ctrl),
+
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: _ThinProgressBar(ctrl: ctrl),
+          ),
+
+          if (ctrl.showDrawer) _EpisodeDrawer(ctrl: ctrl, pageCtrl: _epPageCtrl),
+
+          if (ctrl.showToolsDrawer)
+            _ToolsDrawer(
+              ctrl: ctrl,
+              settings: settings,
+              brightness: _brightness,
+              onBrightnessChange: (v) async {
+                setState(() => _brightness = v);
+                try { await ScreenBrightness().setScreenBrightness(v); } catch (_) {}
+              },
+            ),
+
+          if (_showAutoNext)
+            _AutoNextBanner(
+              count: _autoNextCount,
+              onCancel: _cancelAutoNext,
+              onSkipNow: () {
+                _cancelAutoNext();
+                final next = ctrl.currentEp + 1;
+                ctrl.playEpisode(next);
+                _epPageCtrl.animateToPage(next, duration: RDur.md, curve: RCurve.spring);
+              },
+            ),
+
+          if (ctrl.isLocked)
+            Positioned.fill(
+              child: GestureDetector(
+                onLongPress: ctrl.toggleLock,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: RColors.bgRaised.withOpacity(0.92),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: RColors.glassBorder),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_rounded, color: RColors.text2, size: 15),
+                        const SizedBox(width: 8),
+                        Text('Hold to unlock', style: RText.label(color: RColors.text2)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -536,9 +541,6 @@ class _PortraitControls extends StatelessWidget {
               children: [
                 _PlayerAction(icon: Icons.favorite_border_rounded, activeIcon: Icons.favorite_rounded,
                     activeColor: RColors.like, label: 'Like'),
-                const SizedBox(height: 20),
-                _PlayerAction(icon: Icons.comment_outlined, label: 'Comments',
-                    onTap: () => _showCommentsPlayer(context)),
                 const SizedBox(height: 20),
                 _PlayerAction(icon: Icons.share_rounded, label: 'Share',
                     onTap: () => _showSharePlayer(context)),
@@ -966,7 +968,8 @@ class _PlayerActionState extends State<_PlayerAction> {
 
 class _EpisodeDrawer extends StatelessWidget {
   final PlayerController ctrl;
-  const _EpisodeDrawer({required this.ctrl});
+  final PageController pageCtrl;
+  const _EpisodeDrawer({required this.ctrl, required this.pageCtrl});
 
   @override
   Widget build(BuildContext context) {
@@ -1027,6 +1030,8 @@ class _EpisodeDrawer extends StatelessWidget {
                                     onTap: () {
                                       HapticFeedback.selectionClick();
                                       ctrl.playEpisode(i);
+                                      pageCtrl.animateToPage(i,
+                                          duration: RDur.md, curve: RCurve.spring);
                                       ctrl.toggleDrawer();
                                     },
                                     child: AnimatedContainer(

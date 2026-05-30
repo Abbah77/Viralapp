@@ -10,6 +10,7 @@ import '../controllers/settings_controller.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/tokens.dart';
+import '../widgets/dot_loader.dart';
 import 'player_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -147,7 +148,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             // Content
             Expanded(
               child: _searching
-                  ? const Center(child: CircularProgressIndicator(color: RColors.brand, strokeWidth: 2.5))
+                  ? const Center(child: DotLoader(size: 52))
                   : _hasSearched && _results.isEmpty
                       ? _EmptySearch()
                       : _hasSearched
