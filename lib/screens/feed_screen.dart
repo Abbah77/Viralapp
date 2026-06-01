@@ -54,19 +54,25 @@ class _FeedScreenState extends State<FeedScreen> {
     }
     return ChangeNotifierProvider.value(
       value: _fc,
-      child: AdWrapper(
-        child: Scaffold(
-          backgroundColor: RColors.bg,
-          extendBody: true,
-          extendBodyBehindAppBar: true,
-          body: IndexedStack(
-            index: _navIndex,
-            children: const [_FeedView(), ExploreScreen(), ProfileScreen()],
-          ),
-          bottomNavigationBar: _BottomNav(
-            index: _navIndex,
-            onTap: (i) => setState(() => _navIndex = i),
-          ),
+      child: Scaffold(
+        backgroundColor: RColors.bg,
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        body: IndexedStack(
+          index: _navIndex,
+          children: const [_FeedViewWithAds(), ExploreScreen(), ProfileScreen()],
+        ),
+        bottomNavigationBar: _BottomNav(
+          index: _navIndex,
+          onTap: (i) {
+            setState(() => _navIndex = i);
+            final engine = context.read<AdEngine>();
+            if (i == 0) {
+              engine.onFeedVisible();
+            } else {
+              engine.onFeedHidden();
+            }
+          },
         ),
       ),
     );
@@ -74,6 +80,16 @@ class _FeedScreenState extends State<FeedScreen> {
 }
 
 // ── Feed View ──────────────────────────────────────────────────────────────────
+
+/// Wraps feed with AdWrapper so ads only show on the feed tab
+class _FeedViewWithAds extends StatelessWidget {
+  const _FeedViewWithAds();
+
+  @override
+  Widget build(BuildContext context) {
+    return AdWrapper(child: const _FeedView());
+  }
+}
 
 class _FeedView extends StatefulWidget {
   const _FeedView();

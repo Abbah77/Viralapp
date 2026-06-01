@@ -41,17 +41,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
     setState(() => _searching = true);
     try {
       final results = await ApiService.search(query);
-      setState(() { _results = results; _hasSearched = true; });
+      if (mounted) setState(() { _results = results; _hasSearched = true; _searching = false; });
     } catch (_) {
       // fallback to local feed search
+      if (!mounted) return;
       final fc = context.read<FeedController>();
       final q = query.toLowerCase();
-      setState(() {
-        _results = fc.movies.where((m) => m.title.toLowerCase().contains(q)).toList();
-        _hasSearched = true;
-      });
+      final local = fc.movies.where((m) => m.title.toLowerCase().contains(q)).toList();
+      setState(() { _results = local; _hasSearched = true; _searching = false; });
     }
-    setState(() => _searching = false);
   }
 
   Future<void> _openPlayer(MovieCard movie) async {
