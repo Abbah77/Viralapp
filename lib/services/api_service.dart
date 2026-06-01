@@ -2,6 +2,11 @@ import 'package:dio/dio.dart';
 import '../models/models.dart';
 
 class ApiService {
+  /// In-memory movie card cache — avoids re-fetching thumbnails we already have
+  static final Map<String, MovieCard> _cardCache = {};
+
+  static void cacheCard(MovieCard card) => _cardCache[card.slug] = card;
+  static MovieCard? getCached(String slug) => _cardCache[slug];
   static const String _base = 'https://tt-b577.onrender.com';
 
   // Longer timeouts to handle Render free-tier cold starts (up to 60s)
@@ -37,14 +42,18 @@ class ApiService {
         final params = <String, dynamic>{'limit': limit};
         if (cursor != null) params['cursor'] = cursor;
         final res = await _dio.get('/feed', queryParameters: params);
-        return FeedResponse.fromJson(res.data as Map<String, dynamic>);
+        final feed = FeedResponse.fromJson(res.data as Map<String, dynamic>);
+        for (final card in feed.data) cacheCard(card); // cache thumbnails
+        return feed;
       });
 
   // GET /movie/{slug}
   static Future<MovieDetail> getMovie(String slug) =>
       _withRetry(() async {
         final res = await _dio.get('/movie/$slug');
-        return MovieDetail.fromJson(res.data as Map<String, dynamic>);
+        final detail = MovieDetail.fromJson(res.data as Map<String, dynamic>);
+        cacheCard(detail.movie); // cache for instant profile grid
+        return detail;
       });
 
   // GET /search?q=
