@@ -12,6 +12,7 @@ import '../controllers/settings_controller.dart';
 import '../theme/tokens.dart';
 import '../ads/ad_engine.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart' show ApiService;
 import '../screens/player_screen.dart';
 
 class FeedCard extends StatefulWidget {
@@ -36,6 +37,7 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
   @override
   void initState() {
     super.initState();
+    ApiService.cacheCard(widget.movie); // instant profile thumbnails
     _bind();
   }
 
