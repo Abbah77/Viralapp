@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'controllers/settings_controller.dart';
+import 'services/auth_service.dart';
 import 'ads/ad_engine.dart';
 import 'screens/feed_screen.dart';
 import 'theme/tokens.dart';
@@ -20,14 +21,16 @@ void main() async {
     systemNavigationBarContrastEnforced: false,
   ));
 
-  // Create AdEngine and fire cold-open trigger
   final adEngine = AdEngine()..onAppStart();
+  final auth = AuthService();
+  await auth.init();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsController()),
         ChangeNotifierProvider<AdEngine>.value(value: adEngine),
+        ChangeNotifierProvider<AuthService>.value(value: auth),
       ],
       child: const ReelzApp(),
     ),
@@ -52,7 +55,6 @@ class ReelzApp extends StatelessWidget {
         ),
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
-        // Slider theme — applied globally
         sliderTheme: SliderThemeData(
           trackHeight: 2.5,
           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
@@ -62,7 +64,6 @@ class ReelzApp extends StatelessWidget {
           thumbColor: Colors.white,
           overlayColor: RColors.brand.withOpacity(0.18),
         ),
-        // Switch theme
         switchTheme: SwitchThemeData(
           thumbColor: WidgetStateProperty.resolveWith((s) =>
               s.contains(WidgetState.selected) ? Colors.white : RColors.text3),
