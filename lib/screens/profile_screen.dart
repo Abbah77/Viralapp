@@ -416,7 +416,7 @@ class _TabDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 48;
 
   @override
-  Widget build(_, double _, bool __) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: RColors.bg,
       child: TabBar(
