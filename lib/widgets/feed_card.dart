@@ -11,6 +11,7 @@ import '../controllers/player_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../theme/tokens.dart';
 import '../ads/ad_engine.dart';
+import '../services/auth_service.dart';
 import '../screens/player_screen.dart';
 
 class FeedCard extends StatefulWidget {
@@ -204,13 +205,24 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _ActionBtn(
-                    icon: _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    icon: context.watch<AuthService>().isLiked(widget.movie.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                     label: 'Like',
-                    color: _liked ? RColors.like : RColors.text,
-                    glow: _liked ? RColors.like : null,
+                    color: context.watch<AuthService>().isLiked(widget.movie.id) ? RColors.like : RColors.text,
+                    glow: context.watch<AuthService>().isLiked(widget.movie.id) ? RColors.like : null,
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      setState(() => _liked = !_liked);
+                      final auth = context.read<AuthService>();
+                      if (!auth.isSignedIn) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Sign in to like movies',
+                              style: RText.body(size: 13)),
+                          backgroundColor: RColors.bgRaised,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ));
+                        return;
+                      }
+                      auth.toggleLike(widget.movie.id);
                     },
                   ),
                   const SizedBox(height: 22),
@@ -224,13 +236,24 @@ class _FeedCardState extends State<FeedCard> with AutomaticKeepAliveClientMixin 
                   ),
                   const SizedBox(height: 22),
                   _ActionBtn(
-                    icon: _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                    icon: context.watch<AuthService>().isSaved(widget.movie.id) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                     label: 'Save',
-                    color: _saved ? RColors.brand : RColors.text,
-                    glow: _saved ? RColors.brand : null,
+                    color: context.watch<AuthService>().isSaved(widget.movie.id) ? RColors.brand : RColors.text,
+                    glow: context.watch<AuthService>().isSaved(widget.movie.id) ? RColors.brand : null,
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      setState(() => _saved = !_saved);
+                      final auth = context.read<AuthService>();
+                      if (!auth.isSignedIn) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Sign in to save movies',
+                              style: RText.body(size: 13)),
+                          backgroundColor: RColors.bgRaised,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ));
+                        return;
+                      }
+                      auth.toggleSave(widget.movie.id);
                     },
                   ),
                 ],
