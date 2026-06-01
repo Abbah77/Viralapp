@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../theme/tokens.dart';
+import '../widgets/dot_loader.dart';
 import 'ad_engine.dart';
 import 'ad_html_templates.dart';
 import 'ad_launcher.dart';
@@ -177,26 +178,8 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: RColors.bg,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 48, height: 48,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: RColors.brand,
-                backgroundColor: RColors.glassMd,
-                strokeCap: StrokeCap.round,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Loading…', style: RText.body(size: 13, color: RColors.text3)),
-          ],
-        ),
-      ),
-    ).animate(onPlay: (c) => c.repeat())
-        .shimmer(duration: 1800.ms, color: const Color(0x06FFFFFF));
+      child: const Center(child: SamsungLoader(size: 36)),
+    );
   }
 }
 
