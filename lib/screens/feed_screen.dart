@@ -7,12 +7,14 @@ import '../controllers/feed_controller.dart';
 import '../ads/ad_engine.dart';
 import '../ads/ad_wrapper.dart';
 import '../widgets/dot_loader.dart';
+import '../services/auth_service.dart';
 import '../theme/tokens.dart';
 import '../widgets/ambient_bg.dart';
 import '../widgets/feed_card.dart';
 import 'explore_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
+import 'auth_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -46,6 +48,10 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    if (!auth.isSignedIn && !auth.loading) {
+      return const AuthScreen();
+    }
     return ChangeNotifierProvider.value(
       value: _fc,
       child: AdWrapper(
@@ -483,7 +489,7 @@ class _FeedSkeleton extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const DotLoader(size: 26),
+                        const SamsungLoader(size: 26),
                         const SizedBox(width: 12),
                         Text('Waking up server…',
                             style: RText.body(size: 12, color: RColors.text3)),

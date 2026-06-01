@@ -191,7 +191,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _VideoArea(vc: _vc, ctrl: ctrl, isLandscapeDevice: isLandscapeDevice),
 
           if (ctrl.isBuffering)
-            const Center(child: DotLoader(size: 52)),
+            const Center(child: SamsungLoader(size: 34)),
 
           Positioned.fill(
             child: Row(

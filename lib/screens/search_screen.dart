@@ -185,7 +185,7 @@ class _SearchScreenState extends State<SearchScreen> {
             // Results
             Expanded(
               child: _loading
-                  ? const Center(child: DotLoader(size: 52))
+                  ? const Center(child: SamsungLoader(size: 34))
                   : !_hasSearched
                       ? _EmptyHint()
                       : _results.isEmpty

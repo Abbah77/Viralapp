@@ -150,7 +150,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             // Content
             Expanded(
               child: _searching
-                  ? const Center(child: DotLoader(size: 52))
+                  ? const Center(child: SamsungLoader(size: 34))
                   : _hasSearched && _results.isEmpty
                       ? _EmptySearch()
                       : _hasSearched
