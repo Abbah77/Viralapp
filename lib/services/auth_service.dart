@@ -47,7 +47,10 @@ class UserModel {
 }
 
 class AuthService extends ChangeNotifier {
-  static final _google = GoogleSignIn(scopes: ['email', 'profile']);
+  static final _google = GoogleSignIn(
+    serverClientId: '855194597614-8qh36vk8ijg3uq8aqse3nu6ffduus9m8.apps.googleusercontent.com',
+    scopes: ['email', 'profile'],
+  );
   static const _kUser    = 'reelz_user';
   static const _kLiked   = 'reelz_liked';
   static const _kSaved   = 'reelz_saved';
