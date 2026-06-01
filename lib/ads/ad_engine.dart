@@ -142,6 +142,14 @@ class AdEngine extends ChangeNotifier {
     );
   }
 
+  /// Called when user switches away from feed tab — pause all ad timers
+  void onFeedHidden() {
+    _feedIdleTimer?.cancel();
+    _bannerVisible = false;
+    _interstitialPending = false;
+    notifyListeners();
+  }
+
   void onFeedScrolled() {
     // User is active — reset idle clock
     _feedIdleStart = DateTime.now();
