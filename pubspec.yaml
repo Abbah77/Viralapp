@@ -1,33 +1,46 @@
 name: reelz
-description: Premium Cinema Streaming App
-publish_to: 'none'
+description: Premium short-drama streaming app with coin economy.
+publish_to: none
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # ── Playback ────────────────────────────────────────────────────────────────
   media_kit: ^1.1.10
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
+
+  # ── Networking ──────────────────────────────────────────────────────────────
   dio: ^5.4.0
+
+  # ── UI ──────────────────────────────────────────────────────────────────────
   cached_network_image: ^3.3.1
-  provider: ^6.1.1
   flutter_animate: ^4.5.0
   google_fonts: ^6.2.1
+
+  # ── State management ────────────────────────────────────────────────────────
+  provider: ^6.1.1
+
+  # ── Auth ────────────────────────────────────────────────────────────────────
+  google_sign_in: ^6.2.1
+
+  # ── Storage ─────────────────────────────────────────────────────────────────
+  shared_preferences: ^2.3.0
+
+  # ── Device ──────────────────────────────────────────────────────────────────
   screen_brightness: ^0.2.2+1
   wakelock_plus: ^1.2.5
-  url_launcher: ^6.2.5
-  webview_flutter: ^4.7.0
-  google_sign_in: ^6.2.1
-  shared_preferences: ^2.2.3
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
