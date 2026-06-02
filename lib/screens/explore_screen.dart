@@ -172,8 +172,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 .animate()
                                 .fadeIn(delay: Duration(milliseconds: (i % 9) * 30));
                             }
-                            // Map index accounting for injected ads
-                            final movieIdx = i - (i ~/ adEngine.shouldShowGridAd(i) ? 1 : 0);
                             final safeIdx = i.clamp(0, _movies.length - 1);
                             return _MovieTile(
                               movie: _movies[safeIdx],
