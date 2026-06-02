@@ -4,13 +4,6 @@ import 'ad_engine.dart';
 import 'ad_interstitial_overlay.dart';
 import 'ad_banner_widget.dart';
 
-/// ── AdWrapper ──────────────────────────────────────────────────────────────────
-/// Wraps any screen and injects ads on top based on AdEngine signals.
-/// Use this at the ROOT of FeedScreen so it covers everything.
-///
-/// Usage:
-///   AdWrapper(child: FeedScreen())
-
 class AdWrapper extends StatelessWidget {
   final Widget child;
   const AdWrapper({super.key, required this.child});
@@ -22,26 +15,20 @@ class AdWrapper extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: [
-            // ── App content ─────────────────────────────────────────────────
             child,
 
-            // ── Banner — bottom safe zone ────────────────────────────────────
+            // Banner — randomly appears above bottom nav
             if (!engine.interstitialPending)
               Positioned(
-                bottom: 80, // above bottom nav
+                bottom: 80,
                 left: 0,
                 right: 0,
-                child: AdBannerWidget(
-                  engine: engine,
-                  visible: engine.bannerVisible,
-                ),
+                child: AdBannerWidget(engine: engine, visible: engine.bannerVisible),
               ),
 
-            // ── Interstitial — full screen overlay ───────────────────────────
+            // Interstitial — full screen
             if (engine.interstitialPending)
-              Positioned.fill(
-                child: AdInterstitialOverlay(engine: engine),
-              ),
+              Positioned.fill(child: AdInterstitialOverlay(engine: engine)),
           ],
         );
       },
