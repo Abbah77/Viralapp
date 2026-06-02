@@ -2,39 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
-import 'controllers/settings_controller.dart';
-import 'services/auth_service.dart';
+
 import 'ads/ad_engine.dart';
-import 'screens/feed_screen.dart';
+import 'controllers/feed_controller.dart';
+import 'controllers/settings_controller.dart';
+import 'screens/main_shell.dart';
+import 'services/api_service.dart';
+import 'services/auth_service.dart';
+import 'services/coin_service.dart';
 import 'theme/tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light.copyWith(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Colors.transparent,
-    systemNavigationBarContrastEnforced: false,
+    systemNavigationBarColor: RColors.bg,
   ));
-
-  final adEngine = AdEngine()..onAppStart();
-  final auth = AuthService();
-  await auth.init();
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => SettingsController()),
-        ChangeNotifierProvider<AdEngine>.value(value: adEngine),
-        ChangeNotifierProvider<AuthService>.value(value: auth),
-      ],
-      child: const ReelzApp(),
-    ),
-  );
+  runApp(const ReelzApp());
 }
 
 class ReelzApp extends StatelessWidget {
@@ -42,42 +28,30 @@ class ReelzApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Reelz',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: RColors.bg,
-        colorScheme: const ColorScheme.dark(
-          primary: RColors.brand,
-          secondary: RColors.brand2,
-          surface: RColors.bgSurface,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()..init()),
+        ChangeNotifierProvider(create: (_) => CoinService()..init()),
+        ChangeNotifierProvider(create: (_) => AdEngine()),
+        ChangeNotifierProvider(create: (_) => FeedController()),
+        ChangeNotifierProvider(create: (_) => SettingsController()),
+      ],
+      child: MaterialApp(
+        title: 'Reelz',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: RColors.bg,
+          colorScheme: const ColorScheme.dark(
+            primary: RColors.brand,
+            secondary: RColors.brand2,
+            surface: RColors.bgCard,
+          ),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
         ),
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        sliderTheme: SliderThemeData(
-          trackHeight: 2.5,
-          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-          overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-          activeTrackColor: RColors.brand,
-          inactiveTrackColor: RColors.glassMd,
-          thumbColor: Colors.white,
-          overlayColor: RColors.brand.withOpacity(0.18),
-        ),
-        switchTheme: SwitchThemeData(
-          thumbColor: WidgetStateProperty.resolveWith((s) =>
-              s.contains(WidgetState.selected) ? Colors.white : RColors.text3),
-          trackColor: WidgetStateProperty.resolveWith((s) =>
-              s.contains(WidgetState.selected)
-                  ? RColors.brand.withOpacity(0.7)
-                  : RColors.glass),
-          trackOutlineColor: WidgetStateProperty.resolveWith((s) =>
-              s.contains(WidgetState.selected)
-                  ? Colors.transparent
-                  : RColors.glassBorderMd),
-        ),
+        home: const MainShell(),
       ),
-      home: const FeedScreen(),
     );
   }
 }
