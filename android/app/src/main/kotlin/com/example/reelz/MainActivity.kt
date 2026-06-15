@@ -1,4 +1,4 @@
-package com.example.reelz
+package com.axio.reelz
 
 import io.flutter.embedding.android.FlutterActivity
 
